@@ -16,6 +16,7 @@ export const SOURCE_LABEL: Record<SourceId, string> = {
 const DATE_FORMATTER = new Intl.DateTimeFormat("ja-JP", {
   dateStyle: "long",
   timeStyle: "short",
+  timeZone: "Asia/Tokyo",
 });
 
 export function formatPublishedAt(iso: string): string {
