@@ -2,6 +2,10 @@
 
 個人用ニュース集約サイト。Zenn / はてなブックマーク / Google ニュース / Togetter から記事を毎日自動収集し、Next.js (App Router, SSG) で 1 ページの一覧として表示する。
 
+## 公開 URL
+
+- 本番: <https://project-1czkr.vercel.app/> (カスタムドメイン取得後に変更予定)
+
 ## ディレクトリ構成
 
 ```
