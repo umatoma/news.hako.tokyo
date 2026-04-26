@@ -1,0 +1,61 @@
+name: collect
+run-name: "Collect news (${{ github.event_name }})"
+
+on:
+  schedule:
+    - cron: "0 22 * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: collect
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: npm
+          cache-dependency-path: next/package-lock.json
+
+      - name: Install deps
+        working-directory: next
+        run: npm ci
+
+      - name: Run collector
+        working-directory: next
+        run: npm run collect
+
+      - name: Upload result artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: collector-result-${{ github.run_id }}
+          path: next/collector-result.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Commit & push if content/ changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add content/
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          MESSAGE=$(node next/scripts/collector/compose-commit-message.cjs)
+          git commit -m "$MESSAGE"
+          git push origin HEAD:main

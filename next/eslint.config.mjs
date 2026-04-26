@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // CommonJS scripts intentionally use require() (executed standalone by node)
+    "scripts/collector/compose-commit-message.cjs",
   ]),
 ]);
 

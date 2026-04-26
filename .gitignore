@@ -141,3 +141,6 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# news.hako.tokyo collector output (per-run, not committed)
+next/collector-result.json
