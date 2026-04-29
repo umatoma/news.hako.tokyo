@@ -90,8 +90,21 @@
 - [x] NFR Requirements — **SKIP** (既存 NFR を継承、新規 NFR なし)
 - [x] NFR Design — **SKIP** (NFR Requirements がスキップされるため)
 - [x] Infrastructure Design — **SKIP** (インフラ変更なし)
-- [ ] Code Generation (Part 1 Plan + Part 2 Generate)
-- [ ] Build and Test
+- [x] Code Generation (2026-04-29 完了 — Plan: `aidlc-docs/construction/plans/iteration-2-code-generation-plan.md`、実装 5 ファイル + ドキュメント追加)
+- [x] Build and Test (2026-04-29 完了 — typecheck ✅ / lint ✅ / 86 tests 緑 / build 2.4 秒 + SSG プリレンダリング成功)
+- [x] Git push (commit `2eb50f3` to `origin/main`)
+- [x] Manual workflow trigger (Run ID `25089188899`、24 秒で success、`7a84358` で 26 articles 追加: zenn=10/hatena=10/googlenews=10/togetter=10)
+
+### Iteration 2 完了サマリ
+- **AC-11 ✅**: 各ソース `maxItemsPerRun=10` (collect ジョブ実行で実証 — zenn=10/hatena=10/googlenews=10/togetter=10)
+- **AC-12 ✅**: はてブ URL `https://b.hatena.ne.jp/hotentry.rss` (総合) に変更
+- **AC-13 ✅**: ページに `filterArticlesWithinDays(articles, 3)` を適用 (build 時、SSG プリレンダリング)
+- **AC-14 ✅**: `content/` の Markdown は全件保持 (削除処理なし、新規追加のみ)
+- **AC-15 ✅**: PBT-03 (`filterArticlesWithinDays` の 4 不変条件) が CI で緑
+- **AC-16 ✅**: 既存 76 tests + 新規 10 tests = 86 tests すべて緑
+
+### Vercel デプロイ
+- main への push (commit `2eb50f3` および `7a84358`) を webhook トリガに自動再ビルド (Vercel Dashboard で実行状況確認)
 
 ### Iteration 2 Extension Configuration
 | Extension | Enabled | Decided At | Mode | Notes |

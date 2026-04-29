@@ -894,3 +894,68 @@ aidlc-state.md を更新 (Iteration 2 セクション全面更新)。
 **Context**: INCEPTION Phase — Workflow Planning (Iteration 2) — completed, awaiting user approval before proceeding to Code Generation.
 
 ---
+
+## Workflow Planning — User Approval (Iteration 2) + Code Generation 一括承認
+**Timestamp**: 2026-04-29T12:05:00Z
+**User Input**: "承認します、実装してプッシュ、その後はニュース取得用のWorkflowを手動トリガー、まで進めておいて下さい"
+**AI Response**: User approved Workflow Planning と同時に、Code Generation Part 1/Part 2、Build & Test、Git push、`gh workflow run collect.yml` までの一括実行を承認した。Code Generation Plan (`aidlc-docs/construction/plans/iteration-2-code-generation-plan.md`) を作成し、Part 1/Part 2 を連続実行する。
+**Context**: INCEPTION/CONSTRUCTION boundary — User explicitly authorized end-to-end execution incl. push and workflow_dispatch.
+
+---
+
+## Code Generation Stage Complete (Iteration 2)
+**Timestamp**: 2026-04-29T12:18:00Z
+**User Input**: (auto-execution per pre-approval)
+**AI Response**: Code Generation 完了。
+**Files Modified**:
+- `next/config/sources.ts` (4 ソース `maxItemsPerRun=10`、はてブ URL を hotentry.rss 総合化)
+- `next/lib/articles.ts` (新規 `filterArticlesWithinDays` 純粋関数追加)
+- `next/app/page.tsx` (フィルタを `DISPLAY_WINDOW_DAYS=3` で適用)
+- `next/lib/articles.test.ts` (フィルタの unit test 6 件追加)
+- `next/lib/articles.pbt.test.ts` (PBT-03 不変条件 4 件追加: subset / length / threshold / monotonicity)
+**Verification**:
+- `npx tsc --noEmit`: ✅ no errors
+- `npm run lint`: ✅ no errors
+- `npm run test:run`: ✅ **86/86 tests passing** (従来 76 → 新規 10 追加)
+- `npm run build`: ✅ Compiled in 2.4s, SSG static prerender (4 pages) 成功
+
+**Compliance**:
+- Security Baseline: All N/A (Iteration 1 と同じ)
+- PBT (Partial): PBT-03 ✅ (filterArticlesWithinDays 4 不変条件), 既存 PBT (sortArticlesForDisplay 4) も維持。
+
+**Context**: CONSTRUCTION Phase — Iteration 2 — Code Generation completed. Proceeding to git push and workflow trigger per user pre-approval.
+
+---
+
+## Git Push (Iteration 2)
+**Timestamp**: 2026-04-29T12:19:00Z
+**Commit**: `2eb50f3 feat: limit collection to 10 items per source and filter list to last 3 days`
+- 12 files changed, 970 insertions(+), 7 deletions(-)
+- 4 new files (Iteration 2 docs) + 8 modifications
+**Push Result**: `origin/main` 259bf6b..2eb50f3 success
+**Context**: Build & Test 緑後の push。Vercel が自動再デプロイをトリガー予定。
+
+---
+
+## Manual Workflow Trigger — collect.yml (Iteration 2)
+**Timestamp**: 2026-04-29T12:20:00Z
+**Command**: `gh workflow run collect.yml`
+**Run ID**: 25089188899 (workflow_dispatch on main)
+**Result**: ✅ success in **24 秒** (collect job)
+**Outcome**:
+- 新規コミット `7a84358 chore(collector): add 26 articles (zenn=10, hatena=10, googlenews=10, togetter=10)` を bot が `origin/main` に push
+- AC-11 (各ソース 10 件) を実運用で実証
+
+**Final Status**:
+- INCEPTION (Iteration 2): ✅ Workspace Detection / Requirements Analysis / Workflow Planning (other stages SKIPPED)
+- CONSTRUCTION (Iteration 2): ✅ Code Generation / Build and Test (Functional/NFR/Infra Design SKIPPED)
+- Git push: ✅ commit 2eb50f3
+- Workflow trigger: ✅ Run 25089188899 (24s success), bot commit 7a84358 で 26 articles 追加
+
+**AC Status**:
+- AC-11 ✅ / AC-12 ✅ / AC-13 ✅ / AC-14 ✅ / AC-15 ✅ / AC-16 ✅
+- 既存 AC-01〜AC-10 維持 (Vercel 自動再デプロイ後に AC-01 / AC-03 を再確認可能)
+
+**Context**: Iteration 2 のユーザー指示範囲 (実装 → push → workflow 手動トリガー) を完了。
+
+---
