@@ -4,7 +4,7 @@
 
 ## 公開 URL
 
-- 本番: <https://project-1czkr.vercel.app/> (カスタムドメイン取得後に変更予定)
+- 本番: <https://news.hako.tokyo/>
 
 ## ディレクトリ構成
 
