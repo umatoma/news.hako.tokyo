@@ -5,13 +5,17 @@ import { Header } from "@/components/header";
 import {
   articleRepository,
   computePageStats,
+  filterArticlesWithinDays,
   sortArticlesForDisplay,
   toListItemView,
 } from "@/lib/articles";
 
+const DISPLAY_WINDOW_DAYS = 3;
+
 export default async function Home() {
   const articles = await articleRepository.getAllArticles();
-  const sorted = sortArticlesForDisplay(articles);
+  const recent = filterArticlesWithinDays(articles, DISPLAY_WINDOW_DAYS);
+  const sorted = sortArticlesForDisplay(recent);
   const stats = computePageStats(sorted);
   const views = sorted.map(toListItemView);
 

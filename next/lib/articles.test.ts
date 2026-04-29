@@ -7,6 +7,7 @@ import { ArticleSchema } from "@/lib/article";
 import type { Article } from "@/lib/article";
 import {
   computePageStats,
+  filterArticlesWithinDays,
   formatPublishedAt,
   FsArticleRepository,
   SOURCE_LABEL,
@@ -118,6 +119,51 @@ describe("computePageStats", () => {
     expect(stats.totalArticles).toBe(2);
     expect(stats.lastUpdatedIso).toBe("2026-04-26T05:00:00+09:00");
     expect(stats.lastUpdatedDisplay).not.toBeNull();
+  });
+});
+
+describe("filterArticlesWithinDays", () => {
+  const now = new Date("2026-04-29T00:00:00+09:00");
+
+  function withPublishedAt(iso: string, id: string): Article {
+    return { ...sample, id, publishedAt: iso };
+  }
+
+  it("keeps articles published within the window", () => {
+    const a = withPublishedAt("2026-04-28T10:00:00+09:00", "a"); // -1d
+    const b = withPublishedAt("2026-04-26T01:00:00+09:00", "b"); // -3d (境界の少し前)
+    const c = withPublishedAt("2026-04-25T23:59:59+09:00", "c"); // -3d 超 → 除外
+    const out = filterArticlesWithinDays([a, b, c], 3, now);
+    expect(out.map((x) => x.id).sort()).toEqual(["a", "b"]);
+  });
+
+  it("returns an empty array when none are within the window", () => {
+    const a = withPublishedAt("2026-04-20T00:00:00+09:00", "a");
+    expect(filterArticlesWithinDays([a], 3, now)).toEqual([]);
+  });
+
+  it("returns an empty array for an empty input", () => {
+    expect(filterArticlesWithinDays([], 3, now)).toEqual([]);
+  });
+
+  it("does not mutate the input array", () => {
+    const input = [withPublishedAt("2026-04-28T00:00:00+09:00", "a")];
+    const snapshot = [...input];
+    filterArticlesWithinDays(input, 3, now);
+    expect(input).toEqual(snapshot);
+  });
+
+  it("includes articles published exactly at the threshold", () => {
+    const exactly = withPublishedAt("2026-04-26T00:00:00+09:00", "exact"); // == now - 3d
+    const out = filterArticlesWithinDays([exactly], 3, now);
+    expect(out).toHaveLength(1);
+  });
+
+  it("uses the current time when 'now' is omitted", () => {
+    // Just verify it runs without throwing and returns Article[]
+    const a = withPublishedAt("2026-04-28T00:00:00+09:00", "a");
+    const out = filterArticlesWithinDays([a], 3);
+    expect(Array.isArray(out)).toBe(true);
   });
 });
 

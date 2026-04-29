@@ -63,6 +63,18 @@ export function sortArticlesForDisplay(
   });
 }
 
+const MILLIS_PER_DAY = 24 * 60 * 60 * 1000;
+
+export function filterArticlesWithinDays(
+  articles: ReadonlyArray<Article>,
+  days: number,
+  now: Date = new Date(),
+): Article[] {
+  const reference = now.getTime();
+  const threshold = reference - days * MILLIS_PER_DAY;
+  return articles.filter((a) => Date.parse(a.publishedAt) >= threshold);
+}
+
 export interface PageStats {
   totalArticles: number;
   lastUpdatedIso: string | null;

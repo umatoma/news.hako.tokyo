@@ -771,3 +771,126 @@ Verification results:
 **Context**: AI-DLC workflow MVP scope completed. OPERATIONS phase remains as placeholder.
 
 ---
+
+## New Workflow Iteration — Initial User Request
+**Timestamp**: 2026-04-29T11:30:00Z
+**User Input**: "機能の変更を行いたいです"
+**AI Response**: Acknowledged. MVP は 2026-04-26 に AI-DLC ワークフロー完了済み。新しい機能変更要求として、ブラウンフィールドの新ワークフロー反復を開始する。Welcome message 提示済み、Workspace Detection を実行する。
+**Context**: New workflow iteration start — feature change request on existing brownfield project (news.hako.tokyo MVP).
+
+---
+
+## Workspace Detection Stage
+**Timestamp**: 2026-04-29T11:30:30Z
+**User Input**: (auto-progression after welcome message)
+**AI Response**: Workspace Detection 実行。
+- 既存 aidlc-state.md: あり (MVP 2026-04-26 完了済み)
+- 既存コード: あり (Next.js 16.2.4 App Router、TypeScript、76 tests / Unit 1 Collector + Unit 2 Web Frontend)
+- プロジェクト種別: Brownfield
+- リバースエンジニアリング成果物: 存在 (`aidlc-docs/inception/reverse-engineering/`)、最終更新 2026-04-25
+- 成果物鮮度: コードベース最終実装変更 2026-04-26、それ以降は collector データ追加コミットのみ → 成果物は最新と判定
+- 判定: Reverse Engineering スキップ → Requirements Analysis へ進む
+**Context**: INCEPTION Phase — Workspace Detection — completed. Next: Requirements Analysis (skip Reverse Engineering, artifacts current).
+
+---
+
+## Requirements Analysis — Intent Clarification Questions Issued (Iteration 2)
+**Timestamp**: 2026-04-29T11:32:00Z
+**User Input**: (auto-progression from Workspace Detection)
+**AI Response**: ユーザーリクエスト "機能の変更を行いたいです" は対象機能が未指定のため、意図確認質問ファイルを発行した:
+- File: `aidlc-docs/inception/requirements/feature-change-verification-questions.md`
+- 11 questions covering:
+  - Q1: 変更種別 (Enhancement / New Feature / Bug Fix / Refactoring / Upgrade)
+  - Q2: 対象領域 (Collector / Web Frontend / Sources / CI / Storage / Test / 全体)
+  - Q3: MVP 将来候補との対応 (LLM 要約 / 詳細ページ / 絞り込み / 検索 / Pagination / 管理画面)
+  - Q4: 規模感 (Trivial / Simple / Moderate / Complex)
+  - Q5: 自由記述 (具体内容)
+  - Q6: 現状の不満点
+  - Q7: 受入基準追加の有無
+  - Q8: 緊急度・タイミング
+  - Q9: Security Extension 引継ぎ確認 (Iteration 1: No)
+  - Q10: PBT Extension 引継ぎ確認 (Iteration 1: Partial)
+  - Q11: その他考慮事項 (自由記述)
+- 既存 `requirement-verification-questions.md` (Iteration 1) を上書きせず別名にして履歴を保全。
+- aidlc-state.md に Iteration 2 セクションを追加。
+**Context**: INCEPTION Phase — Requirements Analysis — Step 6 (Generate Clarifying Questions) — gate (Step 6 ⛔) で停止し、ユーザー回答を待つ。
+
+---
+
+## Requirements Analysis — User Answers Received & Clarification Issued (Iteration 2)
+**Timestamp**: 2026-04-29T11:50:00Z
+**User Input**: "回答完了"
+**AI Response**: 11 questions の回答を解析:
+- Q1=A (Enhancement)
+- Q2=A (Collector のみ)
+- Q3=G (将来候補非該当、既存機能修正)
+- Q4=B (Simple)
+- Q5 (free): 各ソース取得件数を「Zenn / Google / Togetter = 上位 10 件、はてブ = カテゴリ無関係 (総合?)」に変更、表示対象を「直近 3 日分の公開日」に絞り (タイミングはビルド時 OK)
+- Q6=A (表示が見づらい / 情報過多)
+- Q7=C (受入基準追加可否は要件分析中に判断)
+- Q8=B (高 — 1〜3 日以内に完了)
+- Q9=A (Security: Iteration 1 と同じ "No" 継続)
+- Q10=A (PBT: Iteration 1 と同じ "Partial" 継続)
+- Q11=なし
+
+検出した issue:
+- **Contradiction**: Q2 (Collector のみ) vs Q5 (直近 3 日フィルタ = Frontend 側ビルド時実装が自然 + 過去記録保持方針)。
+- **Ambiguity**: Q5 ではてブのみ件数指定なし (他 3 ソースは上位 10 件)。
+
+`feature-change-clarification-questions.md` を発行 (2 questions)。Step 6 ⛔ ゲートで停止し、ユーザー clarification を待つ。
+**Context**: INCEPTION Phase — Requirements Analysis — ambiguity/contradiction detection per `question-format-guide.md`.
+
+---
+
+## Requirements Analysis — Clarification Resolved & Document Updated (Iteration 2)
+**Timestamp**: 2026-04-29T11:55:00Z
+**User Input**: "回答完了" (clarification 完了)
+**AI Response**: Clarification 回答:
+- Q1=A (Frontend を変更スコープに含める。Collector + Frontend の 2 領域変更)
+- Q2=A (はてブも他ソースに揃え `maxItemsPerRun=10`、URL を `https://b.hatena.ne.jp/hotentry.rss` 総合に変更)
+
+矛盾・曖昧性すべて解消。`requirements.md` に Section 11 (Iteration 2) を追記:
+- 11.1 Intent Analysis Summary (Enhancement / Multiple Components / Simple / Standard)
+- 11.2 機能要件: FR-02 改訂 (4 ソース全件 `maxItemsPerRun=10`、はてブ総合カテゴリへ) + FR-NEW-01 (一覧の直近 3 日フィルタ、Frontend ビルド時実装)
+- 11.3 非機能要件: NFR への影響整理 (Security=No / PBT=Partial 継続)
+- 11.4 新規 AC-11 〜 AC-16
+- 11.5 Out of Scope
+- 11.6 サマリー
+
+aidlc-state.md を Iteration 2 セクション付きで更新 (Requirements Analysis 完了マーク、User Stories / Application Design / Units Generation を SKIP 予定として明記)。
+**Context**: INCEPTION Phase — Requirements Analysis — completed (Iteration 2)。User approval awaited before proceeding to Workflow Planning.
+
+---
+
+## Requirements Analysis — Approval Prompt Issued (Iteration 2)
+**Timestamp**: 2026-04-29T11:56:00Z
+**User Input**: (auto-progression after document update)
+**AI Response**: Standard approval prompt (Request Changes / Add User Stories / Approve & Continue) を提示。次ステージは Workflow Planning。
+**Context**: INCEPTION Phase — Requirements Analysis — Step 9 (Approval Gate)。
+
+---
+
+## Requirements Analysis — User Approval (Iteration 2)
+**Timestamp**: 2026-04-29T12:00:00Z
+**User Input**: "承認します"
+**AI Response**: User approved the Iteration 2 requirements (Section 11 of `requirements.md`). Proceeding to Workflow Planning.
+**Context**: INCEPTION Phase — Requirements Analysis (Iteration 2) — approved. Next: Workflow Planning.
+
+---
+
+## Workflow Planning Stage Complete (Iteration 2)
+**Timestamp**: 2026-04-29T12:02:00Z
+**User Input**: (auto-progression after Requirements Analysis approval)
+**AI Response**: Workflow Planning 実行完了。`aidlc-docs/inception/plans/execution-plan-iteration-2.md` を作成:
+- Transformation Scope: Single component (next/ パッケージ内クローズド)
+- Risk Level: Low、Rollback: Easy、Testing: Simple
+- INCEPTION で SKIP: User Stories / Application Design / Units Generation
+- CONSTRUCTION で SKIP: Functional Design / NFR Requirements / NFR Design / Infrastructure Design
+- CONSTRUCTION で EXECUTE: Code Generation (Plan+Generate) / Build and Test
+- Single Logical Unit `iteration-2-feature-change` で 1 ユニット扱い
+- Coordination: Sequential (1 パッケージ完全逐次)
+- Estimated Timeline: 約 1 時間以内
+aidlc-state.md を更新 (Iteration 2 セクション全面更新)。
+**Context**: INCEPTION Phase — Workflow Planning (Iteration 2) — completed, awaiting user approval before proceeding to Code Generation.
+
+---

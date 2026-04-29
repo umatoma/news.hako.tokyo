@@ -232,3 +232,89 @@ MVP 完了の判定基準:
 - テスト: **Vitest (PBT Partial: fast-check) + Playwright** + GitHub Actions CI/CD
 - 拡張機能: Security 無効 / PBT 部分適用
 - MVP 完成目標: **1 〜 2 週間**
+
+---
+
+# 11. Iteration 2 — Feature Change (2026-04-29 追記)
+
+**Source**: `feature-change-verification-questions.md` (Q1–Q11) + `feature-change-clarification-questions.md` (Q1–Q2)
+**Trigger User Request**: "機能の変更を行いたいです"
+
+## 11.1 Intent Analysis Summary
+
+| 項目 | 内容 |
+|---|---|
+| **User Request** | "機能の変更を行いたいです" |
+| **Request Type** | Enhancement (既存機能の修正・改善 — Q1=A) |
+| **Scope Estimate** | Multiple Components (Collector 設定 + Web Frontend Server Component — Q2=A + Clarification Q1=A) |
+| **Complexity Estimate** | Simple (各コンポーネント内で完結する小規模変更 — Q4=B) |
+| **Requirements Depth** | Standard (Iteration 1 と同等の深度を継続) |
+| **Urgency** | 高 — 1〜3 日以内に完了 (Q8=B) |
+| **Motivation (動機)** | 表示が見づらい / 情報過多を解消する (Q6=A) |
+
+## 11.2 機能要件の変更 / 追加
+
+### FR-02 改訂: 情報収集 — 取得件数とカテゴリ調整 (`next/config/sources.ts`)
+
+| ソース | 現在 (MVP) | 変更後 (Iteration 2) | 変更内容 |
+|---|---|---|---|
+| **Zenn** | `maxItemsPerRun=50`、`feedUrls=["https://zenn.dev/feed"]` | `maxItemsPerRun=10`、`feedUrls=["https://zenn.dev/feed"]` | 件数のみ変更 |
+| **はてなブックマーク** | `maxItemsPerRun=50`、`feedUrls=["https://b.hatena.ne.jp/hotentry/it.rss"]` (IT カテゴリ) | `maxItemsPerRun=10`、`feedUrls=["https://b.hatena.ne.jp/hotentry.rss"]` (**総合**) | カテゴリと件数の両方変更 (Clarification Q2=A) |
+| **Google ニュース** | `maxItemsPerRun=50`、`queries=["AI"]`、`topics=["TECHNOLOGY"]` | `maxItemsPerRun=10` (queries / topics / geos は現状維持) | 件数のみ変更 |
+| **Togetter** | `maxItemsPerRun=30`、`targetUrls=["https://togetter.com/ranking"]` | `maxItemsPerRun=10`、`targetUrls=["https://togetter.com/ranking"]` | 件数のみ変更 |
+
+**集約上限**: 1 回の収集で最大 40 件 (= 4 ソース × 10 件)。MVP の最大 180 件から 1/4.5 に縮小。
+
+### FR-NEW-01 (Iteration 2): 一覧表示の直近 3 日フィルタ
+
+- **対象**: ルート URL `/` の記事一覧 (`next/app/page.tsx`)
+- **動作**: ビルド時点の現在日時から **公開日 (`publishedAt`) が 3 日以内** の記事のみを表示する
+- **判定式**: `(buildTime - publishedAt) ≤ 3 days` (3 日 = 72 時間 = 259,200,000 ms)
+- **実装位置**: Web Frontend Server Component または `next/lib/articles.ts` 内の純粋関数 (例: `filterArticlesWithinDays(articles, days)`) でビルド時にフィルタ
+- **タイミング**: SSG ビルド時 (= Vercel デプロイ時) に確定 (Q5 自由記述: 「タイミングはビルドした時点で OK」)
+- **データ保持**: `content/*.md` は **全件保持** する (過去記録方針 — 要件 2.1 と整合、Clarification Q1=A)
+- **エッジ**:
+  - 1 件もマッチしない場合は MVP の `EmptyState` コンポーネントが表示される (既存挙動)
+  - タイムゾーンは判定時に UTC (ISO 8601 オフセット付きを既に保持しているため、`Date.parse()` の差分計算で問題なし)
+
+## 11.3 非機能要件への影響
+
+| NFR | 影響 |
+|---|---|
+| NFR-01 (パフォーマンス) | 取得件数が 1/4.5 に削減 → 1 回の収集ジョブの処理時間が短縮、`content/` の蓄積速度も低減。ビルド時間も改善見込み |
+| NFR-04 (テスト) | 既存 PBT (Partial) を継続。新フィルタ関数に対して PBT-03 (不変条件) を追加: 「フィルタ結果は元配列の部分集合 / 件数 ≤ 元配列件数 / 全要素が `now - 3 days` 以内」 |
+| NFR-05 (CI/CD) | 既存パイプライン (lint / typecheck / unit / e2e / gitleaks) のまま、変更なし |
+| NFR-08 (保守性) | 設定単一ファイル (`next/config/sources.ts`) への集約は維持。フィルタ閾値 (3 日) は当面ハードコード許容 (Out of Scope で言及) |
+| Security Baseline | Iteration 1 と同じ "No" (Q9=A — 個人利用 / PoC 相当) |
+| PBT Extension | Iteration 1 と同じ "Partial" (Q10=A — PBT-02, 03, 07, 08, 09 強制適用) |
+
+## 11.4 受入基準の追加
+
+既存 AC-01 〜 AC-10 (MVP) は引き続き有効。Iteration 2 で以下を追加する:
+
+- [ ] **AC-11** (新): `next/config/sources.ts` の各ソースの `maxItemsPerRun` が **10** に設定されている (Zenn / はてブ / Google ニュース / Togetter の 4 件すべて)
+- [ ] **AC-12** (新): はてブの `feedUrls` が `https://b.hatena.ne.jp/hotentry.rss` (総合) に変更されている
+- [ ] **AC-13** (新): 一覧ページに表示される記事が、ビルド時点の現在時刻から **公開日 3 日以内** のものに限定されている (4 日以上前の記事は表示されない)
+- [ ] **AC-14** (新): `content/` 配下の Markdown は引き続き全件保持されている (フィルタ条件外の記事も物理削除されない)
+- [ ] **AC-15** (新): フィルタ関数に対する PBT (PBT-03 不変条件) が CI で緑になる
+- [ ] **AC-16** (新): 既存 76 件のテストが引き続き緑、もしくは仕様変更で意図的に更新されたものに限る
+
+## 11.5 Out of Scope (Iteration 2)
+
+- フィルタ閾値 (3 日) のユーザー設定化 / 設定ファイル化
+- カテゴリ別 / ソース別の表示絞り込み UI
+- 過去記事の検索 / アーカイブ ページ
+- 表示見た目の刷新 (CSS / レイアウト変更は含まない)
+- ソース追加 (Zenn のトピック別フィードや Google ニュースの追加トピック等は今回行わない)
+- `content/` の物理削除 / アーカイブ機構
+
+## 11.6 主要要件サマリー (Iteration 2)
+
+- **対象領域**: Collector 設定 (`next/config/sources.ts`) + Web Frontend (`next/app/page.tsx` / `next/lib/articles.ts`)
+- **取得件数**: 全 4 ソースで **上位 10 件**(`maxItemsPerRun=10`)
+- **はてブのカテゴリ**: IT → 総合 (`hotentry.rss`)
+- **表示フィルタ**: ビルド時点で **公開日 3 日以内** の記事のみ
+- **データ保持**: `content/` は全件保持
+- **拡張機能**: Security=No / PBT=Partial (Iteration 1 継続)
+- **緊急度**: 1〜3 日以内
+- **新規 AC**: AC-11 〜 AC-16

@@ -58,12 +58,12 @@ const sourceConfig: SourceConfig = {
   zenn: {
     enabled: true,
     feedUrls: ["https://zenn.dev/feed"],
-    maxItemsPerRun: 50,
+    maxItemsPerRun: 10,
   },
   hatena: {
     enabled: true,
-    feedUrls: ["https://b.hatena.ne.jp/hotentry/it.rss"],
-    maxItemsPerRun: 50,
+    feedUrls: ["https://b.hatena.ne.jp/hotentry.rss"],
+    maxItemsPerRun: 10,
   },
   googlenews: {
     enabled: true,
@@ -73,13 +73,13 @@ const sourceConfig: SourceConfig = {
     queries: ["AI"],
     topics: ["TECHNOLOGY"],
     geos: [],
-    maxItemsPerRun: 50,
+    maxItemsPerRun: 10,
   },
   togetter: {
     enabled: true,
     targetUrls: ["https://togetter.com/ranking"],
     requestIntervalMs: 5000,
-    maxItemsPerRun: 30,
+    maxItemsPerRun: 10,
   },
 };
 

@@ -66,3 +66,42 @@
 
 ### OPERATIONS Phase
 - [x] Operations (Placeholder — 将来拡張用、MVP では実質的に Construction で完結)
+
+---
+
+## Iteration 2 — Feature Change (2026-04-29 開始)
+
+**Trigger**: User request "機能の変更を行いたいです" (2026-04-29T11:30:00Z)
+**Project Type**: Brownfield (既存 MVP 上の機能変更)
+**Current Phase**: INCEPTION
+**Current Stage**: Requirements Analysis (意図確認質問発行中)
+
+### Stage Progress (Iteration 2)
+- [x] Workspace Detection (2026-04-29 完了 — 既存成果物が現行と判定、Reverse Engineering スキップ)
+- [x] Reverse Engineering — **SKIP** (`aidlc-docs/inception/reverse-engineering/` 成果物が最新)
+- [x] Requirements Analysis (2026-04-29 完了 — `aidlc-docs/inception/requirements/requirements.md` Section 11、承認済み)
+- [x] User Stories — **SKIP** (個人利用 / 単独ステークホルダー / 小規模 Enhancement、Iteration 1 と同条件)
+- [x] Workflow Planning (2026-04-29 完了 — `aidlc-docs/inception/plans/execution-plan-iteration-2.md`、承認待ち)
+- [x] Application Design — **SKIP** (新コンポーネントなし、既存ファイル修正のみ)
+- [x] Units Generation — **SKIP** (単一作業単位で完結)
+
+### CONSTRUCTION Phase (Iteration 2 — Single Logical Unit: `iteration-2-feature-change`)
+- [x] Functional Design — **SKIP** (シンプルなフィルタ関数 + 設定値変更、要件に詳細仕様あり)
+- [x] NFR Requirements — **SKIP** (既存 NFR を継承、新規 NFR なし)
+- [x] NFR Design — **SKIP** (NFR Requirements がスキップされるため)
+- [x] Infrastructure Design — **SKIP** (インフラ変更なし)
+- [ ] Code Generation (Part 1 Plan + Part 2 Generate)
+- [ ] Build and Test
+
+### Iteration 2 Extension Configuration
+| Extension | Enabled | Decided At | Mode | Notes |
+|---|---|---|---|---|
+| security-baseline | No | Iteration 2 Requirements | — | Q9=A、Iteration 1 を継続 |
+| property-based-testing | Yes (Partial) | Iteration 2 Requirements | Partial | Q10=A、Iteration 1 を継続。PBT-02, 03, 07, 08, 09 強制適用。新フィルタ関数に PBT-03 を追加 |
+
+### Iteration 2 Requirement Summary
+- 対象領域: Collector 設定 + Web Frontend
+- Sources 全 4 件 `maxItemsPerRun=10`、はてブを総合 (`hotentry.rss`) に変更
+- 一覧表示フィルタ: 公開日が直近 3 日以内のもののみ (ビルド時判定、Markdown は全件保持)
+- 新規 AC-11 〜 AC-16 を追加
+- 緊急度: 1〜3 日以内 (Q8=B)
