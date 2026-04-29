@@ -75,6 +75,28 @@ export function filterArticlesWithinDays(
   return articles.filter((a) => Date.parse(a.publishedAt) >= threshold);
 }
 
+export function computeDateThreshold(
+  days: number,
+  now: Date = new Date(),
+): string {
+  const ms = now.getTime() - days * MILLIS_PER_DAY;
+  return new Date(ms).toISOString().slice(0, 10);
+}
+
+const FILENAME_DATE_PREFIX = /^(\d{4}-\d{2}-\d{2})-/;
+
+export function filterFileNamesByDatePrefix(
+  fileNames: ReadonlyArray<string>,
+  thresholdDate: string,
+): string[] {
+  return fileNames.filter((p) => {
+    const base = p.slice(p.lastIndexOf("/") + 1);
+    const match = FILENAME_DATE_PREFIX.exec(base);
+    if (match === null) return true;
+    return match[1]! >= thresholdDate;
+  });
+}
+
 export interface PageStats {
   totalArticles: number;
   lastUpdatedIso: string | null;
@@ -146,6 +168,7 @@ async function walk(dir: string, accumulator: string[]): Promise<void> {
 
 export interface ArticleRepository {
   getAllArticles(): Promise<Article[]>;
+  getArticlesPublishedSince(thresholdDate: string): Promise<Article[]>;
 }
 
 export interface ArticleRepositoryDeps {
@@ -164,6 +187,16 @@ export class FsArticleRepository implements ArticleRepository {
 
   async getAllArticles(): Promise<Article[]> {
     const files = await this.fileReader.listMarkdownFiles(this.contentDir);
+    return this.readArticlesFromFiles(files);
+  }
+
+  async getArticlesPublishedSince(thresholdDate: string): Promise<Article[]> {
+    const files = await this.fileReader.listMarkdownFiles(this.contentDir);
+    const candidates = filterFileNamesByDatePrefix(files, thresholdDate);
+    return this.readArticlesFromFiles(candidates);
+  }
+
+  private async readArticlesFromFiles(files: ReadonlyArray<string>): Promise<Article[]> {
     const articles: Article[] = [];
     for (const filePath of files) {
       const text = await this.fileReader.readText(filePath);

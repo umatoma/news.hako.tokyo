@@ -1,9 +1,23 @@
 import * as fc from "fast-check";
 import { describe, it } from "vitest";
 
-import { filterArticlesWithinDays, sortArticlesForDisplay } from "@/lib/articles";
+import {
+  filterArticlesWithinDays,
+  filterFileNamesByDatePrefix,
+  sortArticlesForDisplay,
+} from "@/lib/articles";
 
 import { articleArbitrary } from "../scripts/collector/test/generators/article.gen";
+
+const datePrefixArb = fc
+  .date({
+    min: new Date("2024-01-01T00:00:00Z"),
+    max: new Date("2027-12-31T00:00:00Z"),
+  })
+  .map((d) => d.toISOString().slice(0, 10));
+
+const fileNameArb = fc.tuple(datePrefixArb, fc.hexaString({ minLength: 4, maxLength: 10 }))
+  .map(([date, suffix]) => `/c/${date}-${suffix}.md`);
 
 describe("sortArticlesForDisplay (PBT-03)", () => {
   it("output length equals input length", () => {
@@ -137,6 +151,74 @@ describe("filterArticlesWithinDays (PBT-03)", () => {
           );
           for (const id of idsSmall) {
             if (!idsLarge.has(id)) return false;
+          }
+          return true;
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+});
+
+describe("filterFileNamesByDatePrefix (PBT-03)", () => {
+  it("output is a subset of input", () => {
+    fc.assert(
+      fc.property(
+        fc.array(fileNameArb, { maxLength: 30 }),
+        datePrefixArb,
+        (files, threshold) => {
+          const out = filterFileNamesByDatePrefix(files, threshold);
+          const inSet = new Set(files);
+          return out.every((p) => inSet.has(p));
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+
+  it("output length is less than or equal to input length", () => {
+    fc.assert(
+      fc.property(
+        fc.array(fileNameArb, { maxLength: 30 }),
+        datePrefixArb,
+        (files, threshold) =>
+          filterFileNamesByDatePrefix(files, threshold).length <= files.length,
+      ),
+      { numRuns: 100 },
+    );
+  });
+
+  it("every output file's prefix is >= threshold (when prefix matches)", () => {
+    fc.assert(
+      fc.property(
+        fc.array(fileNameArb, { maxLength: 30 }),
+        datePrefixArb,
+        (files, threshold) => {
+          const out = filterFileNamesByDatePrefix(files, threshold);
+          return out.every((p) => {
+            const base = p.slice(p.lastIndexOf("/") + 1);
+            const m = /^(\d{4}-\d{2}-\d{2})-/.exec(base);
+            return m === null || m[1]! >= threshold;
+          });
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+
+  it("monotonicity: looser threshold never excludes previously-included files", () => {
+    fc.assert(
+      fc.property(
+        fc.array(fileNameArb, { maxLength: 30 }),
+        datePrefixArb,
+        datePrefixArb,
+        (files, t1, t2) => {
+          const stricter = t1 > t2 ? t1 : t2;
+          const looser = t1 > t2 ? t2 : t1;
+          const sStrict = new Set(filterFileNamesByDatePrefix(files, stricter));
+          const sLoose = new Set(filterFileNamesByDatePrefix(files, looser));
+          for (const p of sStrict) {
+            if (!sLoose.has(p)) return false;
           }
           return true;
         },

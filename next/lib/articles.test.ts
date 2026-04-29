@@ -6,8 +6,10 @@ import { describe, expect, it } from "vitest";
 import { ArticleSchema } from "@/lib/article";
 import type { Article } from "@/lib/article";
 import {
+  computeDateThreshold,
   computePageStats,
   filterArticlesWithinDays,
+  filterFileNamesByDatePrefix,
   formatPublishedAt,
   FsArticleRepository,
   SOURCE_LABEL,
@@ -167,6 +169,54 @@ describe("filterArticlesWithinDays", () => {
   });
 });
 
+describe("computeDateThreshold", () => {
+  it("returns YYYY-MM-DD for now - days", () => {
+    const now = new Date("2026-04-29T12:00:00Z");
+    expect(computeDateThreshold(3, now)).toBe("2026-04-26");
+    expect(computeDateThreshold(0, now)).toBe("2026-04-29");
+    expect(computeDateThreshold(30, now)).toBe("2026-03-30");
+  });
+
+  it("returns a 10-character ISO date string", () => {
+    const out = computeDateThreshold(3, new Date());
+    expect(out).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});
+
+describe("filterFileNamesByDatePrefix", () => {
+  it("keeps files whose YYYY-MM-DD prefix is >= threshold", () => {
+    const files = [
+      "/c/2026-04-25-a.md",
+      "/c/2026-04-26-b.md",
+      "/c/2026-04-28-c.md",
+    ];
+    expect(filterFileNamesByDatePrefix(files, "2026-04-26")).toEqual([
+      "/c/2026-04-26-b.md",
+      "/c/2026-04-28-c.md",
+    ]);
+  });
+
+  it("includes files with malformed names (safe-include)", () => {
+    const files = ["/c/no-date.md", "/c/2026-04-28-x.md"];
+    expect(filterFileNamesByDatePrefix(files, "2026-04-29")).toEqual([
+      "/c/no-date.md",
+    ]);
+  });
+
+  it("returns empty array when nothing passes", () => {
+    expect(
+      filterFileNamesByDatePrefix(["/c/2026-01-01-x.md"], "2026-04-26"),
+    ).toEqual([]);
+  });
+
+  it("does not mutate the input", () => {
+    const input = ["/c/2026-04-28-a.md"];
+    const snapshot = [...input];
+    filterFileNamesByDatePrefix(input, "2026-04-26");
+    expect(input).toEqual(snapshot);
+  });
+});
+
 describe("FsArticleRepository", () => {
   it("returns empty array when content directory is empty", async () => {
     const reader = new InMemoryFileReader();
@@ -214,5 +264,83 @@ describe("FsArticleRepository", () => {
       fileReader: reader,
     });
     await expect(repo.getAllArticles()).rejects.toThrow(/Invalid frontmatter/);
+  });
+
+  describe("getArticlesPublishedSince", () => {
+    function frontmatterFor(article: Article): string {
+      return matter.stringify("# t\n\nb\n", {
+        id: article.id,
+        title: article.title,
+        url: article.url,
+        source: article.source,
+        published_at: article.publishedAt,
+        collected_at: article.collectedAt,
+        summary: article.summary,
+        tags: article.tags,
+        thumbnail_url: article.thumbnailUrl,
+      });
+    }
+
+    function articleAt(date: string, idSuffix: string): Article {
+      return ArticleSchema.parse({
+        ...sample,
+        id: `${"a".repeat(15)}${idSuffix}`,
+        url: `https://example.com/${idSuffix}`,
+        publishedAt: `${date}T07:00:00+09:00`,
+      });
+    }
+
+    it("only reads files whose date prefix is >= threshold", async () => {
+      const reader = new InMemoryFileReader();
+      const dir = "/fake/content";
+      const old = articleAt("2026-04-20", "1");
+      const recent = articleAt("2026-04-28", "2");
+      reader.files.set(path.join(dir, "2026-04-20-old.md"), frontmatterFor(old));
+      reader.files.set(path.join(dir, "2026-04-28-recent.md"), frontmatterFor(recent));
+      const repo = new FsArticleRepository({ contentDir: dir, fileReader: reader });
+      const out = await repo.getArticlesPublishedSince("2026-04-26");
+      expect(out).toHaveLength(1);
+      expect(out[0]!.publishedAt).toBe(recent.publishedAt);
+    });
+
+    it("includes files whose prefix equals the threshold", async () => {
+      const reader = new InMemoryFileReader();
+      const dir = "/fake/content";
+      const exact = articleAt("2026-04-26", "1");
+      reader.files.set(path.join(dir, "2026-04-26-exact.md"), frontmatterFor(exact));
+      const repo = new FsArticleRepository({ contentDir: dir, fileReader: reader });
+      const out = await repo.getArticlesPublishedSince("2026-04-26");
+      expect(out).toHaveLength(1);
+    });
+
+    it("returns empty array when content directory is empty", async () => {
+      const reader = new InMemoryFileReader();
+      const repo = new FsArticleRepository({
+        contentDir: "/fake/empty",
+        fileReader: reader,
+      });
+      const out = await repo.getArticlesPublishedSince("2026-04-26");
+      expect(out).toEqual([]);
+    });
+
+    it("does not read files whose prefix is older than the threshold", async () => {
+      const reader = new InMemoryFileReader();
+      const dir = "/fake/content";
+      const old = articleAt("2026-04-20", "1");
+      reader.files.set(path.join(dir, "2026-04-20-x.md"), frontmatterFor(old));
+      // Spy on readText to verify it is not called
+      let readCount = 0;
+      const wrapped: FileReader = {
+        listMarkdownFiles: (d) => reader.listMarkdownFiles(d),
+        readText: async (p) => {
+          readCount += 1;
+          return reader.readText(p);
+        },
+        exists: (p) => reader.exists(p),
+      };
+      const repo = new FsArticleRepository({ contentDir: dir, fileReader: wrapped });
+      await repo.getArticlesPublishedSince("2026-04-28");
+      expect(readCount).toBe(0);
+    });
   });
 });

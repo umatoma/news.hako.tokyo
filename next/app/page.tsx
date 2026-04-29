@@ -4,6 +4,7 @@ import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import {
   articleRepository,
+  computeDateThreshold,
   computePageStats,
   filterArticlesWithinDays,
   sortArticlesForDisplay,
@@ -11,10 +12,16 @@ import {
 } from "@/lib/articles";
 
 const DISPLAY_WINDOW_DAYS = 3;
+const PREFETCH_MARGIN_DAYS = 1;
 
 export default async function Home() {
-  const articles = await articleRepository.getAllArticles();
-  const recent = filterArticlesWithinDays(articles, DISPLAY_WINDOW_DAYS);
+  const now = new Date();
+  const thresholdDate = computeDateThreshold(
+    DISPLAY_WINDOW_DAYS + PREFETCH_MARGIN_DAYS,
+    now,
+  );
+  const candidates = await articleRepository.getArticlesPublishedSince(thresholdDate);
+  const recent = filterArticlesWithinDays(candidates, DISPLAY_WINDOW_DAYS, now);
   const sorted = sortArticlesForDisplay(recent);
   const stats = computePageStats(sorted);
   const views = sorted.map(toListItemView);
