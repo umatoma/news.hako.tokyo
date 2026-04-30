@@ -1,0 +1,15 @@
+---
+id: 3hfawov4zv1x3xmm
+title: ZOZOがAI＋LINEで日常の服選びをサポート。LINE公式アカウント「ZOZOの似合うコーデAI ラボくん」を開設 - ｄメニューニュース
+url: >-
+  https://news.google.com/rss/articles/CBMihAJBVV95cUxQOE5ZbTRoZUlsWFF3SGN2WklGTEtFcVA4Ym1HazFhQjllM1hmSGFRMnFwY3pTZEJ5NTJ2V1RUQXdKWkFxemozd0ZYOXljcjhNOG5icTFEeEs4a2p0TXgwc1I2RncxSndRZ1ZzTTV5M20xUm5hZkxrNlVWM3h1MlFEN1htUHpxcWhLWGJVZHdaWVdzTDRlZ21DaDJhOGhyaWs4SlpLNnVWOGhjSUhEeldPNUpPaml3NkVtRWlBNTVSOFAxbFJGN3N3RF9VQjBQX3hqTS1UZVdCdWxiaWNmRzh3VUFLWV96ZUpxMmhRV2NDSk1uM2p6TFRNaGZLVjRrdW51ekhLbtIBtAFBVV95cUxOMktkaGVISk9PZWoyc1BlNU5jZzMyd3NnSl9UNGl3ZmI0SFZ2bTJVeDU1TGxqczBRWFRVWjVDaWlDUVduRFdnTG9aS3RmSnFvMlo3WlVvNnBQTk5ieHdHRnlCWm8xUHZDc3ZaNElVSWFQaHQxbENoT2tUOTZ3dXdaNGFCZlhpTkpseFQxRkRoLTk2d1I3Vkx3Z21qVlBjUkUwOV8waXZpdHRYbVU4R2t5dGQxRWs?oc=5
+source: googlenews
+published_at: '2026-04-30T22:14:13.000Z'
+collected_at: '2026-04-30T22:26:14.310Z'
+summary: "ZOZOがAI＋LINEで日常の服選びをサポート。LINE公式アカウント「ZOZOの似合うコーデAI ラボくん」を開設\_\_ｄメニューニュース"
+tags: []
+thumbnail_url: null
+---
+# ZOZOがAI＋LINEで日常の服選びをサポート。LINE公式アカウント「ZOZOの似合うコーデAI ラボくん」を開設 - ｄメニューニュース
+
+ZOZOがAI＋LINEで日常の服選びをサポート。LINE公式アカウント「ZOZOの似合うコーデAI ラボくん」を開設  ｄメニューニュース
