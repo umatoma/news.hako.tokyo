@@ -4,94 +4,83 @@
 
 ## API・外部サービス
 
-**ニュースソース（コレクター）:**
-
-- **Zenn RSS** — `https://zenn.dev/feed`
-  - 利用目的: 技術記事のフィード取得
+**ニュースソース (RSS フィード):**
+- Zenn (`https://zenn.dev/feed`) — 技術記事 RSS フィード
   - クライアント: `rss-parser` ライブラリ
+  - 認証: なし (公開フィード)
   - 実装: `next/scripts/collector/sources/zenn-rss-fetcher.ts`
-  - 設定: `next/config/sources.ts`（`zenn.feedUrls`）
-  - 認証: 不要
-
-- **はてなブックマーク RSS** — `https://b.hatena.ne.jp/hotentry.rss`
-  - 利用目的: ホットエントリー記事の取得
+- はてなブックマーク (`https://b.hatena.ne.jp/hotentry.rss`) — ホットエントリ RSS フィード
   - クライアント: `rss-parser` ライブラリ
+  - 認証: なし (公開フィード)
   - 実装: `next/scripts/collector/sources/hatena-rss-fetcher.ts`
-  - 設定: `next/config/sources.ts`（`hatena.feedUrls`）
-  - 認証: 不要
-
-- **Google News RSS** — `https://news.google.com/rss/search?q=...` / `https://news.google.com/news/rss/headlines/section/topic/...`
-  - 利用目的: 検索クエリ・トピック・地域別ニュースの取得
-  - クライアント: `rss-parser` ライブラリ
+- Google News RSS (`https://news.google.com/rss/search`, `https://news.google.com/news/rss/headlines/section/topic/...`) — トピック・クエリ・地域別フィード
+  - クライアント: `rss-parser` ライブラリ (生の XML を Node.js `fetch` で取得後にパース)
+  - 認証: なし (公開フィード)
   - 実装: `next/scripts/collector/sources/google-news-rss-fetcher.ts`
-  - 設定: `next/config/sources.ts`（`googlenews.queries`, `googlenews.topics`, `googlenews.geos`）
-  - 認証: 不要（公開 RSS エンドポイント）
 
-- **Togetter** — `https://togetter.com/ranking`
-  - 利用目的: ランキングページからまとめ記事をスクレイピング
-  - クライアント: `cheerio` ライブラリ（HTML スクレイピング）
+**Webスクレイピング:**
+- Togetter ランキング (`https://togetter.com/ranking`) — HTML スクレイピングで記事リストを取得
+  - クライアント: `cheerio` ライブラリ (HTML パース)、Node.js `fetch` (HTTP)
+  - 認証: なし
+  - レートリミット: リクエスト間隔 5000ms (設定値 `requestIntervalMs`)
   - 実装: `next/scripts/collector/sources/togetter-scraper.ts`
-  - 設定: `next/config/sources.ts`（`togetter.targetUrls`）
-  - 認証: 不要
-  - 備考: リクエスト間隔制御あり（デフォルト 5000ms）
 
 **フォント:**
-
-- **Google Fonts (Geist / Geist Mono)** — `next/font/google` 経由
-  - 利用目的: UI フォント
+- Google Fonts (Geist Sans / Geist Mono) — Next.js `next/font/google` によりビルド時にセルフホスト化
   - 実装: `next/app/layout.tsx`
-  - 認証: 不要
 
 ## データストレージ
 
 **データベース:**
-- 使用なし（データベース不採用）
+- なし — すべての記事データはファイルシステム上の Markdown ファイルとして管理
 
 **ファイルストレージ:**
-- ローカルファイルシステム — `content/` ディレクトリ（Markdown ファイル形式で記事を永続化）
-  - ファイル名パターン: `YYYY-MM-DD-<slug>.md`
-  - フロントマター形式: `gray-matter` ライブラリで読み書き
-  - 書き込み: `next/scripts/collector/lib/markdown-writer.ts`
-  - 読み込み: `next/lib/articles.ts`（`FsArticleRepository` クラス）
+- ローカルファイルシステム / Git リポジトリ上の `content/` ディレクトリ
+  - 形式: YAML frontmatter 付き Markdown ファイル (`{publishedAt-date}-{slug}.md`)
+  - 読み取り: `next/lib/articles.ts` の `FsArticleRepository`
+  - 書き込み: `next/scripts/collector/lib/markdown-writer.ts` の `MarkdownWriter`
+  - 環境変数: `CONTENT_DIR` (未設定時は `../content` を使用)
 
 **キャッシュ:**
-- 使用なし（明示的なキャッシュ層なし）
+- なし
 
-**コレクター実行結果 JSON:**
-- `next/collector-result.json` — 直近実行の統計情報（フォーマット: `CollectorRunResult`）
-  - `next/scripts/collector/lib/job-summary-reporter.ts` で書き出し
-  - GitHub Actions アーティファクトとして 30 日間保持（`.github/workflows/collect.yml`）
+## 認証・アイデンティティ
 
-## 認証・ID 管理
+**認証プロバイダ:**
+- なし — 公開サイト、ユーザー認証機能なし
 
-- 認証プロバイダー: 使用なし（認証機能なし）
-- ユーザー管理: なし（個人用ニュース集約サイト）
-
-## モニタリング・オブザーバビリティ
+## 監視・オブザーバビリティ
 
 **エラートラッキング:**
-- 外部サービスなし
+- なし
 
 **ログ:**
-- コレクターは独自の `Logger` インターフェースを使用（`next/scripts/collector/logger.ts`）
-- `DefaultLogger` が `console.info` / `console.warn` / `console.error` へ書き出し
-- GitHub Actions ジョブサマリーへの Markdown レポート出力（`GITHUB_STEP_SUMMARY` 環境変数経由）
+- カスタム `Logger` インターフェース + `DefaultLogger` 実装 (`next/scripts/collector/logger.ts`) — collector スクリプト内でのみ使用
+- 出力先: コンソール (stdout/stderr)
+
+**GitHub Actions ジョブサマリー:**
+- `GITHUB_STEP_SUMMARY` 環境変数が設定されている場合、`JobSummaryReporter` がコレクターの実行結果を Markdown でサマリーに書き込む
+- 実装: `next/scripts/collector/lib/job-summary-reporter.ts`
+
+**コレクター実行結果 JSON:**
+- `next/collector-result.json` に実行結果を出力 (Git 管理外)
+- GitHub Actions で `collector-result-{run_id}` アーティファクトとして 30 日間保存
 
 ## CI/CD・デプロイ
 
 **ホスティング:**
-- 明示的なデプロイ設定なし（Next.js 標準の出力形式）
+- `.gitignore` に `.vercel` が含まれているため Vercel が候補だが、デプロイ設定ファイルは現時点で未コミット
 
-**CI パイプライン:**
-- GitHub Actions
-  - `ci.yml` — push/PR 時に静的チェック（lint・型チェック・ユニットテスト）→ ビルド → E2E テストを順次実行
-  - `collect.yml` — 毎日 UTC 22:00（JST 07:00）に定期実行、もしくは手動トリガーでコレクターを起動し `content/` の変更を自動コミット＆プッシュ
-  - gitleaks によるシークレットスキャン（`ci.yml`）
-  - `npm audit` によるセキュリティ脆弱性チェック（`ci.yml`、`continue-on-error: true`）
-
-**GitHub Actions 利用シークレット・権限:**
-- `GITHUB_TOKEN`（gitleaks アクション向け）
-- `collect.yml` は `contents: write` 権限を使用（自動コミットプッシュのため）
+**CI パイプライン (GitHub Actions):**
+- `ci.yml` — push/PR 時に実行
+  - `static-checks` ジョブ: `npm run lint` → `tsc --noEmit` → `npm run test:run`
+  - `build` ジョブ: `npm run build` (static-checks 完了後)
+  - `e2e` ジョブ: Playwright テスト (build 完了後、Chromium のみ)
+  - `gitleaks` ジョブ: シークレット漏洩スキャン (`gitleaks/gitleaks-action@v2`)
+  - `npm-audit` ジョブ: 脆弱性チェック (continue-on-error: true)
+- `collect.yml` — 毎日 UTC 22:00 (JST 07:00) にスケジュール実行・手動実行可
+  - `npm run collect` → `content/` に変更があれば自動 commit & push
+  - `compose-commit-message.cjs` でコミットメッセージを生成
 
 ## Webhook・コールバック
 
@@ -99,16 +88,20 @@
 - なし
 
 **送信:**
-- なし（外部への Webhook 送信はない）
+- なし
 
-## 環境変数一覧
+## 環境変数
 
-| 変数名 | 用途 | 必須 |
-|--------|------|------|
-| `CONTENT_DIR` | コンテンツディレクトリパスの上書き | 任意（デフォルト: `../content`） |
-| `GITHUB_STEP_SUMMARY` | GitHub Actions ジョブサマリーファイルパス | CI のみ |
-| `CI` | CI 環境判定フラグ（Playwright 挙動切り替え） | CI のみ |
+**必須:**
+- なし (すべてデフォルト値あり)
+
+**任意:**
+- `CONTENT_DIR` — 記事ファイルの配置ディレクトリパス (デフォルト: `../content`)
+- `GITHUB_STEP_SUMMARY` — GitHub Actions 提供変数、ジョブサマリーへの書き込みに使用
+
+**シークレット:**
+- GitHub Actions の `GITHUB_TOKEN` — `collect.yml` で `git push` 時に使用 (GitHub 自動提供)
 
 ---
 
-*外部連携監査: 2026-05-30*
+*連携監査: 2026-05-30*

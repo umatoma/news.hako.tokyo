@@ -4,74 +4,73 @@
 
 ## 言語
 
-**主要言語:**
-- TypeScript 5.x — アプリケーション全体（フロントエンド・コレクター・スクリプト）
-- CSS — スタイリング（Tailwind CSS v4 経由）
+**主要:**
+- TypeScript 5.x — フロントエンド (Next.js アプリ)、バックエンドスクリプト (collector)、テストコードすべて
+- CSS — `next/app/globals.css` (Tailwind CSS のエントリポイント)
 
-**補助言語:**
-- JavaScript (CommonJS) — `next/scripts/collector/compose-commit-message.cjs`（GitHub Actions から node で直接実行）
+**補助:**
+- CommonJS JavaScript — `next/scripts/collector/compose-commit-message.cjs` (GitHub Actions からスタンドアロンで実行されるスクリプト)
 
 ## ランタイム
 
-**実行環境:**
-- Node.js v24.13.1（`.nvmrc` で固定）
+**環境:**
+- Node.js v24.13.1 (`.nvmrc` で固定)
 
-**パッケージマネージャー:**
+**パッケージマネージャ:**
 - npm
-- ロックファイル: `next/package-lock.json`（コミット済み）
+- ロックファイル: `next/package-lock.json` (lockfileVersion: 3) — 存在する
 
 ## フレームワーク
 
 **コア:**
-- Next.js 16.2.4 — App Router ベースの SSR フロントエンド（`next/app/`）
-- React 19.2.4 / react-dom 19.2.4 — UI ライブラリ
+- Next.js 16.2.4 — SSR/SSG Web アプリケーション (`next/app/` — App Router 構成)
+- React 19.2.4 — UI コンポーネント (`next/components/`, `next/app/`)
 
 **テスト:**
-- Vitest ^2.1.8 — ユニット・プロパティベーステスト（設定: `next/vitest.config.ts`）
-- Playwright ^1.48 — E2E テスト（設定: `next/playwright.config.ts`）
-- fast-check ^3.23.1 — プロパティベーステスト用アービトラリ
+- Vitest 2.1.8 — ユニットテスト・プロパティベーステスト (`next/vitest.config.ts`)
+- Playwright 1.48 — E2E テスト (`next/playwright.config.ts`, `next/e2e/`)
+- fast-check 3.23.1 — プロパティベーステスト用 (`*.pbt.test.ts`)
 
-**ビルド・開発:**
-- TypeScript tsc 5.x（型チェック: `next/tsconfig.json`）
-- ESLint 9 + eslint-config-next 16.2.4（設定: `next/eslint.config.mjs`）
-- Tailwind CSS ^4 + `@tailwindcss/postcss` ^4（設定: `next/postcss.config.mjs`）
-- tsx ^4.19.2 — TypeScript スクリプトを直接実行（コレクター起動用）
+**ビルド/開発:**
+- tsx 4.19.2 — TypeScript スクリプトの直接実行 (`npm run collect` → `tsx scripts/collector/index.ts`)
+- Tailwind CSS v4 — ユーティリティファースト CSS
+- PostCSS (`@tailwindcss/postcss`) — CSS 変換パイプライン (`next/postcss.config.mjs`)
+- ESLint 9 + `eslint-config-next` — リンティング (`next/eslint.config.mjs`)
 
-## 主要な依存ライブラリ
+## 主要依存関係
 
-**クリティカル:**
-- `zod` ^3.23.8 — スキーマ定義・バリデーション（記事モデル・ソース設定の型安全性）
-- `gray-matter` ^4.0.3 — Markdown フロントマターの読み書き（`next/lib/articles.ts`、`next/scripts/collector/lib/markdown-writer.ts`）
-- `rss-parser` ^3.13.0 — RSS/Atom フィードの解析（`next/scripts/collector/sources/rss-mapping.ts`）
-- `cheerio` ^1.0.0 — HTML スクレイピング（Togetter ページ解析: `next/scripts/collector/sources/togetter-scraper.ts`）
+**重要:**
+- `zod` 3.23.8 — 記事スキーマ・ソース設定のバリデーション (`next/lib/article.ts`, `next/config/sources.ts`)
+- `gray-matter` 4.0.3 — Markdown frontmatter の読み書き (`next/lib/articles.ts`, `next/scripts/collector/lib/markdown-writer.ts`)
+- `rss-parser` 3.13.0 — RSS/Atom フィード解析 (`next/scripts/collector/sources/rss-mapping.ts`)
+- `cheerio` 1.0.0 — HTML スクレイピング (Togetter ランキングページ) (`next/scripts/collector/sources/togetter-scraper.ts`)
 
 **インフラ:**
-- `next/font/google` — Geist / Geist Mono フォント（CDN 経由: `next/app/layout.tsx`）
+- `next/font/google` — Google Fonts (Geist Sans / Geist Mono) のセルフホスト (`next/app/layout.tsx`)
 
 ## 設定
 
 **環境変数:**
-- `CONTENT_DIR` — コンテンツディレクトリのパス上書き（未設定時は `../content` を使用: `next/lib/articles.ts`）
-- `GITHUB_STEP_SUMMARY` — GitHub Actions ジョブサマリーパス（コレクター: `next/scripts/collector/index.ts`）
-- `CI` — CI 判定フラグ（Playwright 設定で使用: `next/playwright.config.ts`）
+- `CONTENT_DIR` — 記事 Markdown ファイルの配置ディレクトリ (未設定時は `../content` に解決) (`next/lib/articles.ts`)
+- `GITHUB_STEP_SUMMARY` — GitHub Actions ジョブサマリーファイルパス (CI 環境のみ) (`next/scripts/collector/index.ts`)
 
 **ビルド設定ファイル:**
-- `next/next.config.ts` — Next.js 設定（現時点では空のデフォルト設定）
-- `next/tsconfig.json` — TypeScript 設定（strict モード、パスエイリアス `@/*` → `./`）
-- `next/postcss.config.mjs` — PostCSS 設定（Tailwind CSS プラグイン）
-- `next/eslint.config.mjs` — ESLint flat config（next core-web-vitals + typescript ルール）
-- `next/vitest.config.ts` — Vitest 設定（`@` エイリアス、`**/*.test.ts` 対象）
-- `next/playwright.config.ts` — Playwright 設定（chromium のみ、baseURL: http://localhost:3000）
+- `next/next.config.ts` — Next.js 設定 (現在はデフォルト)
+- `next/tsconfig.json` — TypeScript 設定 (target: ES2017, strict: true, パスエイリアス `@/*` → `./`)
+- `next/vitest.config.ts` — Vitest 設定 (環境: node、パスエイリアス `@` → `next/`)
+- `next/playwright.config.ts` — Playwright 設定 (Chromium のみ、`http://localhost:3000`)
+- `next/postcss.config.mjs` — PostCSS 設定 (`@tailwindcss/postcss`)
+- `next/eslint.config.mjs` — ESLint 設定 (`eslint-config-next/core-web-vitals` + TypeScript)
 
 ## プラットフォーム要件
 
 **開発:**
-- Node.js v24.13.1（`.nvmrc` 参照）
-- npm（`next/` ディレクトリで `npm install`）
+- Node.js v24.13.1 (`.nvmrc` 準拠)
+- npm (ロックファイルあり)
 
 **本番:**
-- デプロイ先は明示的に設定されていない（Vercel 等への静的/SSR デプロイを想定できる構成）
-- CI: GitHub Actions（`.github/workflows/ci.yml`）
+- Next.js アプリ: デプロイ先は未定 (`.gitignore` に `.vercel` が含まれているため Vercel も候補)
+- コレクター: GitHub Actions (スケジュール実行) で動作、収集結果を `content/` に書き込み git push
 
 ---
 

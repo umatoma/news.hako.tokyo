@@ -5,214 +5,200 @@
 
 ## システム概要
 
+このプロジェクトは**2つの独立したサブシステム**で構成される個人用ニュース集約サイトである。
+
 ```text
-┌──────────────────────────────────────────────────────────────────┐
-│                  GitHub Actions (collect.yml)                     │
-│              毎日 UTC 22:00 にスケジュール実行                      │
-└───────────────────────────┬──────────────────────────────────────┘
-                            │ npm run collect
-                            ▼
-┌──────────────────────────────────────────────────────────────────┐
-│              Collector スクリプト (Node.js / tsx)                  │
-│   `next/scripts/collector/index.ts`                               │
-│                                                                    │
-│  ┌───────────────┐ ┌──────────────┐ ┌──────────────────────────┐ │
-│  │ ZennRssFetcher│ │HatenaRss     │ │ GoogleNewsRssFetcher /   │ │
-│  │               │ │Fetcher       │ │ TogetterScraper          │ │
-│  └───────┬───────┘ └──────┬───────┘ └───────────┬──────────────┘ │
-│          └────────────────┼───────────────────────┘               │
-│                           ▼                                        │
-│              CollectorRunner (dedup → write)                       │
-│              `next/scripts/collector/runner.ts`                    │
-└───────────────────────────┬──────────────────────────────────────┘
-                            │ Markdown ファイル書き出し
-                            ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                  content/ ディレクトリ (git 管理)                   │
-│  `content/YYYY-MM-DD-<slug>--<id6>.md`  (記事 1 件 = 1 ファイル)  │
-└───────────────────────────┬──────────────────────────────────────┘
-                            │ ファイルシステム読み取り (Next.js SSG)
-                            ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                  Next.js 16 フロントエンド                          │
-│   `next/app/page.tsx`  (Server Component / SSG)                   │
-│                                                                    │
-│  ┌──────────────┐  ┌──────────────┐  ┌───────────────────────┐   │
-│  │  Header      │  │  ArticleList │  │  Footer               │   │
-│  │ (stats 表示) │  │  (一覧表示)  │  │ (最終更新日表示)      │   │
-│  └──────────────┘  └──────────────┘  └───────────────────────┘   │
-└──────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                    コレクター (Node.js スクリプト)             │
+│   `next/scripts/collector/`                                   │
+│                                                              │
+│  SourceFetchers → CollectorRunner → MarkdownWriter           │
+│  (Zenn/Hatena/GoogleNews/Togetter)  → Deduplicator           │
+└───────────────────────────────┬──────────────────────────────┘
+                                │ Markdownファイルを書き出す
+                                ▼
+┌──────────────────────────────────────────────────────────────┐
+│                    content/ (ファイルストア)                   │
+│   `content/YYYY-MM-DD-<slug>.md`                             │
+│   各ファイルにフロントマター(YAML) + 本文                       │
+└───────────────────────────────┬──────────────────────────────┘
+                                │ ファイルシステムから読み込む
+                                ▼
+┌──────────────────────────────────────────────────────────────┐
+│                    Next.js フロントエンド                      │
+│   `next/app/` + `next/lib/` + `next/components/`             │
+│                                                              │
+│  FsArticleRepository → page.tsx (RSC) → React コンポーネント  │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-## コンポーネント責務
+## コンポーネントの責務
 
 | コンポーネント | 責務 | ファイル |
-|--------------|------|---------|
-| Collector エントリポイント | 環境設定を解決し Runner を起動 | `next/scripts/collector/index.ts` |
-| BuildRunner | 依存性の組み立て (DI ルート) | `next/scripts/collector/builder.ts` |
-| CollectorRunner | ソース横断的なフェッチ・重複排除・書き出し制御 | `next/scripts/collector/runner.ts` |
-| ZennRssFetcher / HatenaRssFetcher / GoogleNewsRssFetcher | RSS フィードの取得と記事マッピング | `next/scripts/collector/sources/` |
-| TogetterScraper | HTML スクレイピングによる記事取得 | `next/scripts/collector/sources/togetter-scraper.ts` |
-| Deduplicator | content/ を走査して既知 URL の Set を構築、重複をフィルタ | `next/scripts/collector/lib/deduplicator.ts` |
-| MarkdownWriter | 記事を gray-matter frontmatter 付き Markdown に変換して保存 | `next/scripts/collector/lib/markdown-writer.ts` |
-| SlugBuilder | 記事タイトルの ASCII 部分から URL-safe スラッグを生成 | `next/scripts/collector/lib/slug-builder.ts` |
-| JobSummaryReporter | 実行結果を JSON と GitHub Actions ステップサマリに書き出し | `next/scripts/collector/lib/job-summary-reporter.ts` |
-| FsArticleRepository | content/ を走査し gray-matter Markdown を Article[] に変換 | `next/lib/articles.ts` |
-| Next.js Page (Home) | フィルタ・ソート・ビュー変換をサーバーサイドで実行 | `next/app/page.tsx` |
-| Article* React コンポーネント | 記事一覧 UI | `next/components/` |
+|----------------|------|---------|
+| `Article` (ドメインモデル) | 記事エンティティの型定義・バリデーション・シリアライズ | `next/lib/article.ts` |
+| `FsArticleRepository` | Markdownファイルを読み込みArticleオブジェクトに変換するリポジトリ | `next/lib/articles.ts` |
+| `CollectorRunner` | 全ソースを順次取得・重複排除・書き込みを統括するオーケストレーター | `next/scripts/collector/runner.ts` |
+| `SourceFetcher` (各実装) | 各ニュースソースからFetchedArticleを取得するアダプター | `next/scripts/collector/sources/` |
+| `Deduplicator` | 既存コンテンツとの重複チェック (URL正規化ベース) | `next/scripts/collector/lib/deduplicator.ts` |
+| `MarkdownWriter` | ArticleをMarkdownファイルとして`content/`に書き出す | `next/scripts/collector/lib/markdown-writer.ts` |
+| `page.tsx` (RSC) | データ取得・フィルタリング・ビュー変換を行うServer Component | `next/app/page.tsx` |
+| UIコンポーネント群 | ステートレスな表示専用コンポーネント | `next/components/` |
 
 ## パターン概要
 
-**全体:** Git-as-Database + File-based Content Pattern
+**全体:** コレクターと表示系を**ファイルシステム(content/)でつなぐパイプライン + 静的サイトジェネレーター相当**のアーキテクチャ。
 
-**主要な特徴:**
-- データベースを持たず、`content/` ディレクトリ内の Markdown ファイルがデータストア
-- Collector スクリプト (Node.js) と Web フロントエンド (Next.js) が同一リポジトリに共存
-- フロントエンドは SSG (Static Site Generation) ── サーバーサイドのレンダリングを `npm run build` 時に解決
-- Collector は GitHub Actions のスケジュール実行で毎日自動収集し、差分を git commit & push
-- 依存性注入 (DI) パターンで全インフラ境界 (HTTP・ファイルシステム・クロック) がインタフェース抽象化されテスト可能
+**主な特徴:**
+- Next.js App Router の Server Component (`page.tsx`) がデータ取得を担い、クライアント側JSは最小限
+- コレクターはすべての依存関係をインターフェースで抽象化し、DI (Constructor Injection) によってテスト可能にしている
+- `Article` ドメインモデルを `zod` スキーマで定義し、バリデーションと型安全を両立
+- `content/` ディレクトリが2サブシステム間の唯一の結合点 (疎結合)
 
 ## レイヤー
 
 **ドメインモデル層:**
-- 目的: `Article` 型と `SourceId` の定義、frontmatter ↔ Article の変換
+- 目的: `Article` の型定義・バリデーション・フロントマター変換
 - 場所: `next/lib/article.ts`
-- 含むもの: zod スキーマ、型定義、`toFrontmatter` / `fromFrontmatter`
-- 依存先: zod のみ
-- 利用元: Collector スクリプト、フロントエンド lib の両方
+- 含むもの: `ArticleSchema`, `SourceId`, `toFrontmatter()`, `fromFrontmatter()`
+- 依存先: `zod`
+- 使用者: コレクター・フロントエンド双方
 
-**ソース設定層:**
-- 目的: 各ニュースソースの接続設定 (URL・件数上限など)
-- 場所: `next/config/sources.ts`
-- 含むもの: zod スキーマ、`SourceConfig` 型、実設定オブジェクト
-- 依存先: zod のみ
-- 利用元: Collector スクリプト
-
-**Collector コア層:**
-- 目的: フェッチ・重複排除・書き出しのオーケストレーション
-- 場所: `next/scripts/collector/`
-- 含むもの: `runner.ts`、`builder.ts`、`logger.ts`、`lib/`、`sources/`
-- 依存先: ドメインモデル層、ソース設定層
-- 利用元: GitHub Actions (CI/CD)
-
-**リポジトリ層 (フロントエンド):**
-- 目的: content/ ディレクトリを走査して Article[] を返す
+**リポジトリ層 (フロントエンド側):**
+- 目的: `content/` からMarkdownを読み込み、`Article[]` を返す
 - 場所: `next/lib/articles.ts`
-- 含むもの: `FsArticleRepository`、フィルタ・ソート・ビュー変換ユーティリティ
-- 依存先: ドメインモデル層、Node.js `fs`、gray-matter
-- 利用元: Next.js Page
+- 含むもの: `FsArticleRepository`, `FileReader` インターフェース, フィルタリング/ソート/統計ヘルパー
+- 依存先: `gray-matter`, `next/lib/article.ts`
+- 使用者: `next/app/page.tsx`
 
-**プレゼンテーション層:**
-- 目的: React Server Components による UI 描画
-- 場所: `next/app/`、`next/components/`
-- 含むもの: `page.tsx` (Server Component)、`layout.tsx`、各 UI コンポーネント
-- 依存先: リポジトリ層
-- 利用元: Next.js ビルド・リクエスト
+**プレゼンテーション層 (フロントエンド側):**
+- 目的: RSCによるデータ取得とUIレンダリング
+- 場所: `next/app/page.tsx`, `next/components/`
+- 含むもの: `ArticleListItemView` (ViewObject), Tailwind CSSスタイルのコンポーネント
+- 依存先: `next/lib/articles.ts`
+- 使用者: Next.js ルーター
+
+**コレクタービジネスロジック層:**
+- 目的: 全ソース取得・重複排除・書き込みのオーケストレーション
+- 場所: `next/scripts/collector/runner.ts`
+- 含むもの: `CollectorRunner`, `CollectorRunnerDeps` (全依存のDIコンテナ)
+- 依存先: Fetcher群, `Deduplicator`, `MarkdownWriter`, `Logger`, `Clock`
+- 使用者: `next/scripts/collector/index.ts` (エントリポイント)
+
+**ソースアダプター層:**
+- 目的: 各ニュースソース固有のHTTP取得・パース処理
+- 場所: `next/scripts/collector/sources/`
+- 含むもの: `ZennRssFetcher`, `HatenaRssFetcher`, `GoogleNewsRssFetcher`, `TogetterScraper`
+- 依存先: `HttpClient`, `Logger`, `Clock`, `rss-parser`, `cheerio`
+- 使用者: `CollectorRunner`
+
+**インフラ抽象化層 (コレクター):**
+- 目的: IO依存を差し替え可能なインターフェースで包む
+- 場所: `next/scripts/collector/lib/`
+- 含むもの: `HttpClient`, `FileSystem`, `Clock`, `Deduplicator`, `MarkdownWriter`, `SlugBuilder`, `Logger`
+- 使用者: `builder.ts` でインスタンス化
 
 ## データフロー
 
-### Collector 実行パス (GitHub Actions)
+### コレクター実行パス (GitHub Actions スケジュール)
 
-1. `collect.yml` スケジュールトリガー → `npm run collect`
-2. `next/scripts/collector/index.ts`: `CONTENT_DIR` と `RESULT_JSON_PATH` を解決し `buildRunner` を呼び出す
-3. `next/scripts/collector/builder.ts`: HTTP クライアント・FileSystem・Clock・Logger・各 Fetcher・Deduplicator・MarkdownWriter を構築して `CollectorRunner` に注入
-4. `next/scripts/collector/runner.ts`(`CollectorRunner.run`):
-   - `Deduplicator.initialize()` ── content/ の全 Markdown を走査し既知 URL を `Set<string>` に格納
-   - 各ソースを順次フェッチ (`ZennRssFetcher` / `HatenaRssFetcher` / `GoogleNewsRssFetcher` / `TogetterScraper`)
-   - `Deduplicator.filterNew()` ── 新規 URL のみ抽出
-   - `MarkdownWriter.write()` ── `content/YYYY-MM-DD-<slug>.md` として書き出し
-5. `JobSummaryReporter.emit()` ── `next/collector-result.json` と `$GITHUB_STEP_SUMMARY` に書き出し
-6. GitHub Actions が `content/` の差分を git commit & push
+1. `collect.yml` → `npm run collect` → `next/scripts/collector/index.ts`
+2. `buildRunner()` (`next/scripts/collector/builder.ts`) がすべての依存をDIで組み立て
+3. `CollectorRunner.run()` (`next/scripts/collector/runner.ts`) が各ソースを順次取得
+4. 各 `SourceFetcher.fetch()` → HTTP GET → RSS/HTMLパース → `FetchedArticle[]`
+5. `Deduplicator.filterNew()` → 既存URLとの差分計算
+6. `MarkdownWriter.write()` → `content/YYYY-MM-DD-<slug>.md` にフロントマター付きMarkdownを書き出し
+7. `JobSummaryReporter.emit()` → `collector-result.json` + GitHub Step Summary を出力
+8. GitHub Actions が `git add content/ && git commit && git push`
 
-### Web 表示パス (SSG / Next.js build)
+### フロントエンド表示パス (Next.js RSC)
 
-1. `next/app/page.tsx`(`Home`): `computeDateThreshold(4)` で 4 日前の日付文字列を生成
-2. `FsArticleRepository.getArticlesPublishedSince(thresholdDate)` ── content/ のファイル名を日付プレフィックスで事前絞り込みし、該当 Markdown を読み込んで `fromFrontmatter` で `Article[]` に変換
-3. `filterArticlesWithinDays(candidates, 3, now)` ── 直近 3 日分のみ残す (DISPLAY_WINDOW_DAYS)
-4. `sortArticlesForDisplay` ── `publishedAt` 降順、同じ場合は `collectedAt` 降順
-5. `computePageStats` ── 件数と最終更新日時を集計
-6. `toListItemView` ── `Article` → `ArticleListItemView` (表示専用ビューモデル)
-7. React ツリーを静的 HTML として書き出し
+1. ブラウザリクエスト → `next/app/page.tsx` (Server Component)
+2. `articleRepository.getArticlesPublishedSince(thresholdDate)` → `FsArticleRepository`
+3. `fs.readdir(content/)` → ファイル名によるプレフィルタ → `gray-matter` でパース → `fromFrontmatter()` で `Article[]`
+4. `filterArticlesWithinDays()` → 直近3日に絞り込み
+5. `sortArticlesForDisplay()` → `publishedAt` 降順ソート
+6. `toListItemView()` → `ArticleListItemView[]` に変換
+7. `<ArticleList>` → `<ArticleListItem>` → HTML出力
 
 **状態管理:**
-- サーバーサイドのみ。クライアントサイドの状態は存在しない。全データは `next build` 時にファイルシステムから読み取り HTML に埋め込まれる。
+- サーバー側: RSCがリクエスト毎にファイルを読み直す (メモリキャッシュなし)
+- クライアント側: ステートなし (純粋な表示のみ)
 
-## 主要な抽象化
+## 主な抽象化
 
-**`SourceFetcher<TConfig>` インタフェース:**
-- 目的: 各ニュースソースの取得ロジックを均一に扱う
-- 実装: `ZennRssFetcher`、`HatenaRssFetcher`、`GoogleNewsRssFetcher`、`TogetterScraper`
-- 場所: `next/scripts/collector/sources/source-fetcher.ts`
+**`SourceFetcher<TConfig>` インターフェース:**
+- 目的: ソース種別を問わない統一的な取得インターフェース
+- 実装例: `next/scripts/collector/sources/zenn-rss-fetcher.ts`, `togetter-scraper.ts`
+- パターン: インターフェース + DI
 
-**`HttpClient` インタフェース:**
-- 目的: HTTP 通信をモック可能にする
-- 実装: `DefaultHttpClient` (fetch ラッパー)、テスト用 `RecordingHttpClient`
-- 場所: `next/scripts/collector/lib/http-client.ts`
+**`FileSystem` / `FileReader` インターフェース:**
+- 目的: Node.js `fs` モジュールをラップしてテスト用インメモリ実装に差し替え可能にする
+- 実装: `next/scripts/collector/lib/file-system.ts`, `next/lib/articles.ts`
+- テスト用: `next/scripts/collector/test/in-memory-file-system.ts`
 
-**`FileSystem` / `FileReader` インタフェース:**
-- 目的: ファイル I/O をモック可能にする
-- 実装: `DefaultFileSystem`、テスト用 `InMemoryFileSystem`
-- 場所: `next/scripts/collector/lib/file-system.ts`
+**`HttpClient` インターフェース:**
+- 目的: `fetch` をラップし、テスト用の録音/再生モックに差し替え可能にする
+- 実装: `next/scripts/collector/lib/http-client.ts`
+- テスト用: `next/scripts/collector/test/recording-http-client.ts`
 
 **`Clock` 型:**
-- 目的: 現在時刻取得をモック可能にする
-- 型: `() => Date`
-- 場所: `next/scripts/collector/lib/clock.ts`
+- 目的: `new Date()` の依存を注入可能にし、テストの時刻制御を可能にする
+- 実装: `next/scripts/collector/lib/clock.ts` (`type Clock = () => Date`)
 
-**`ArticleRepository` インタフェース:**
-- 目的: フロントエンドのデータアクセスを抽象化
-- 実装: `FsArticleRepository`
-- 場所: `next/lib/articles.ts`
-
-**`Article` / `ArticleFrontmatter` (zod スキーマ):**
-- 目的: アプリケーション全体で共有するドメイン型
-- 場所: `next/lib/article.ts`
+**`ArticleRepository` インターフェース:**
+- 目的: フロントエンド側のファイルアクセスをテスト可能に抽象化
+- 実装: `FsArticleRepository` (`next/lib/articles.ts`)
 
 ## エントリポイント
 
-**Collector エントリポイント:**
+**コレクター:**
 - 場所: `next/scripts/collector/index.ts`
-- 起動方法: `npm run collect` (tsx で直接実行)
-- 責務: パスを解決して `buildRunner` を呼び出し、エラーを process.exit(1) で伝播
+- トリガー: `npm run collect` / GitHub Actions `collect.yml`
+- 責務: `buildRunner()` を呼び出し、`runner.run()` を実行し、エラー時に `process.exit(1)`
 
-**Web フロントエンド エントリポイント:**
+**フロントエンド:**
 - 場所: `next/app/page.tsx`
-- 起動方法: `next build` (SSG) または `next start`
-- 責務: データ取得・フィルタ・ソート・ビュー変換をサーバーサイドで実行し React ツリーを返す
+- トリガー: Next.js App Router のHTTPリクエスト
+- 責務: データ取得・フィルタリング・コンポーネントへのprops注入
 
 **レイアウト:**
 - 場所: `next/app/layout.tsx`
-- 責務: HTML ルート要素・フォント定義・メタデータを定義
+- 責務: フォント設定 (Geist)、HTMLルート、メタデータ定義
 
 ## アーキテクチャ上の制約
 
-- **スレッディング:** シングルスレッドの Node.js イベントループ。Collector は各ソースを順次 (`for...of`) フェッチする (並列化なし)
-- **グローバル状態:** `next/lib/articles.ts` の `articleRepository` はモジュールレベルシングルトン (`new FsArticleRepository()`)。`next/config/sources.ts` の `sourceConfig` も同様
-- **データストア:** データベース不使用。git リポジトリ内の `content/` ディレクトリがデータストア
-- **ビルド時データ:** フロントエンドは SSG のため、表示データはビルド時点のファイルシステム内容に固定される。ビルド後に追加された記事は再ビルドしない限り反映されない
+- **ランタイム:** Node.js (コレクター: `tsx` で実行, フロントエンド: Next.js 16.2.4 / React 19)
+- **グローバル状態:** `articleRepository` のシングルトン (`next/lib/articles.ts` 末尾)、`defaultFileSystem` / `defaultHttpClient` のモジュールレベル定数
+- **結合点:** `content/` ディレクトリのみ。コレクターとフロントエンドはそれ以外の依存を持たない
+- **スレッドモデル:** シングルスレッドイベントループ。コレクターは各ソースを**逐次**処理 (並列フェッチなし)
+- **重複排除の精度:** URLの正規化 (`next/scripts/collector/lib/url-normalize.ts`) に依存。正規化ロジックが変わると既存記事が再収集される可能性あり
 
 ## アンチパターン
 
-### `articleRepository` の直接インポート
+### `content/` を直接Gitにコミットする設計
 
-**内容:** `next/app/page.tsx` は `articleRepository` (モジュールレベルシングルトン) を直接インポートして使用している
-**問題:** テスト環境でリポジトリの差し替えが困難
-**代替:** `FsArticleRepository` をページのデフォルト引数またはコンテキスト経由で注入する
+**何が起きているか:** コレクターが収集した記事Markdownをリポジトリの `content/` ディレクトリに直接コミットしている。
+
+**なぜそうなっているか:** 外部データベースを持たず、Gitをコンテンツストアとして使うシンプルな設計選択。記事の変更履歴がGitログに残る。
+
+**注意点:** `content/` のファイル数が増えるにつれ、リポジトリサイズとクローン時間が増大する。現時点では意図的な設計。
 
 ## エラーハンドリング
 
-**戦略:** Collector は各ソースのエラーをキャッチしてログに記録し、残りのソースを継続処理する。フロントエンドはエラー時に例外をそのままスローし Next.js のエラーバウンダリに委ねる。
+**戦略:** フォルトトレランス (ソース単位でエラーを吸収)
 
 **パターン:**
-- Collector fetcher: ソース単位で try/catch し `logger.error` → `failedSources` に追記。プロセスは終了しない
-- Frontmatter パース: `fromFrontmatter` で zod バリデーション失敗時はファイルパス付きエラーをスロー
-- HTTP レスポンス: ステータス 400 以上は `logger.warn` して `continue` (例外ではなく条件分岐)
+- `SourceFetcher` の各実装: 1つのフィードURL失敗時は `warn` ログを出してスキップし、次のURLを継続 (`try/catch` + `continue`)
+- `CollectorRunner`: 1つのソース全体が失敗しても `failedSources` に記録して残りのソースを継続
+- `MarkdownWriter.write()`: ファイル1件の書き込み失敗は `skipped` カウントに加算して継続
+- フロントエンド: `fromFrontmatter()` のパース失敗は `throw new Error(...)` でサーバー起動エラーにエスカレーション
 
 ## 横断的関心事
 
-**ロギング:** `Logger` インタフェース + `DefaultLogger` (`next/scripts/collector/logger.ts`)。`SecretScrubber` でシークレットを自動マスク。フォーマット: `[LEVEL][source] message key=value...`
+**ロギング:** `Logger` インターフェース + `DefaultLogger` 実装 (`next/scripts/collector/logger.ts`)。`SecretScrubber` でログ内のシークレット文字列を自動マスク。フォーマット: `[LEVEL][source] message key=value`
 
-**バリデーション:** zod スキーマ (`ArticleSchema`、`ArticleFrontmatterSchema`、各 `SourceConfig` スキーマ) による実行時バリデーション
+**バリデーション:** `zod` スキーマによるランタイムバリデーション。`Article`, `SourceConfig` 等の入力境界で使用。
 
 **認証:** なし (公開サイト)
 

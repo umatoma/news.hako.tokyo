@@ -2,163 +2,169 @@
 
 **分析日:** 2026-05-30
 
-## 命名規則
+## 命名パターン
 
-**ファイル名:**
-- TypeScript ソースファイル: `kebab-case.ts` / `kebab-case.tsx`（例: `article-list-item.tsx`, `slug-builder.ts`）
-- テストファイル: `{対象ファイル名}.test.ts`（例: `articles.test.ts`）
-- プロパティベーステスト: `{対象ファイル名}.pbt.test.ts`（例: `articles.pbt.test.ts`）
-- ジェネレータ: `{名前}.gen.ts`（例: `article.gen.ts`, `rss-item.gen.ts`）
-- テスト用フェイク実装: `{名前}-{種別}.ts`（例: `in-memory-file-system.ts`, `recording-http-client.ts`）
+**ファイル:**
+- React コンポーネント: kebab-case（例: `article-list-item.tsx`, `source-badge.tsx`）
+- ライブラリ・ユーティリティ: kebab-case（例: `articles.ts`, `http-client.ts`, `url-normalize.ts`）
+- テストファイル: `{対象名}.test.ts`（ユニット）、`{対象名}.pbt.test.ts`（プロパティベース）
+- E2E テスト: `{対象名}.spec.ts`
 
 **関数・変数:**
-- キャメルケース: `formatPublishedAt`, `generateArticleId`, `filterArticlesWithinDays`
-- 定数（モジュールスコープ）: `UPPER_SNAKE_CASE`（例: `MILLIS_PER_DAY`, `ARTICLE_SOURCES`, `SOURCE_LABEL`, `DEFAULT_TIMEOUT_MS`）
+- 関数名: camelCase（例: `formatPublishedAt`, `sortArticlesForDisplay`, `filterArticlesWithinDays`）
+- 変数名: camelCase（例: `contentDir`, `fileReader`, `startedAtMs`）
+- 定数（モジュールレベルの不変値）: UPPER_SNAKE_CASE（例: `MILLIS_PER_DAY`, `DEFAULT_TIMEOUT_MS`, `FILENAME_DATE_PREFIX`, `CONTENT_DIR`）
+- 読み取り専用オブジェクト型定数: UPPER_SNAKE_CASE（例: `SOURCE_LABEL`, `ARTICLE_SOURCES`）
 
-**クラス・インターフェース・型:**
-- PascalCase: `ArticleSchema`, `FsArticleRepository`, `DefaultHttpClient`, `CollectorRunner`
-- インターフェース名に `I` プレフィックスは使わない（例: `FileReader`, `HttpClient`, `Logger`）
-- Deps サフィックスを依存オブジェクト型に使用: `MarkdownWriterDeps`, `DeduplicatorDeps`, `LoggerDeps`
-- Zod スキーマには `Schema` サフィックス: `ArticleSchema`, `SourceConfigSchema`
-- Zod スキーマから型を `z.infer<>` で導出: `export type Article = z.infer<typeof ArticleSchema>`
+**型:**
+- インターフェース: PascalCase + 末尾に `I` を付けない（例: `FileReader`, `HttpClient`, `Logger`, `PageStats`）
+- クラス: PascalCase（例: `FsArticleRepository`, `DefaultHttpClient`, `DefaultLogger`, `CollectorRunner`）
+- 型エイリアス: PascalCase（例: `SourceId`, `LogLevel`, `Clock`）
+- Zod スキーマ: PascalCase + `Schema` サフィックス（例: `ArticleSchema`, `SourceIdSchema`）
+
+**React コンポーネント:**
+- コンポーネント関数: PascalCase（例: `ArticleListItem`, `SourceBadge`, `Header`）
+- Props インターフェース: `{コンポーネント名}Props`（例: `ArticleListItemProps`, `HeaderProps`）
+
+**クラス依存性注入パターン:**
+- 依存オブジェクトをまとめる型: `{クラス名}Deps`（例: `CollectorRunnerDeps`, `ZennRssFetcherDeps`, `LoggerDeps`）
+- コンストラクタ引数: `deps` という名前に統一
 
 ## コードスタイル
 
-**フォーマット:**
-- ESLint 使用: `eslint-config-next/core-web-vitals` + `eslint-config-next/typescript`（設定: `next/eslint.config.mjs`）
-- `prettier` の設定ファイルは存在しない（ESLint のみ）
-- TypeScript strict モード有効（`next/tsconfig.json` の `"strict": true`）
+**フォーマッター:**
+- 設定ファイルは未検出（Next.js デフォルト準拠と推定）
+- インデント: スペース 2 文字
+- 文字列リテラル: ダブルクォート
 
-**型注釈:**
-- 値のインポートと型のインポートを分離: `import type { Article } from "@/lib/article"` + `import { fromFrontmatter } from "@/lib/article"`
-- 読み取り専用コレクションには `ReadonlyArray<T>` を使用: `filterArticlesWithinDays(articles: ReadonlyArray<Article>, ...)`
-- プライベートフィールドには `private readonly` を使用
+**リンター:**
+- ESLint 9 + `eslint-config-next/core-web-vitals` + `eslint-config-next/typescript`
+- 設定ファイル: `next/eslint.config.mjs`
+- CommonJS スクリプト（`scripts/collector/compose-commit-message.cjs`）は ignore 対象
 
-## import の構成
+**TypeScript 設定:**
+- `strict: true`（全厳格オプション有効）
+- `target: ES2017`
+- `module: esnext`, `moduleResolution: bundler`
+- パスエイリアス: `@/*` → プロジェクトルートからの相対パス
 
-**順序（ブランク行で区切る）:**
-1. Node.js 組み込み（`node:` プレフィックス付き）: `import path from "node:path";`
-2. 外部ライブラリ: `import matter from "gray-matter";`
-3. プロジェクト内エイリアス（`@/` から始まる）: `import type { Article } from "@/lib/article";`
-4. 相対パス（同一モジュール内）: `import { SlugBuilder } from "./slug-builder";`
+## import の書き方
+
+**順序（昇順）:**
+1. Node.js 組み込みモジュール（`node:` プレフィックス付き）
+2. サードパーティライブラリ
+3. `@/` エイリアス（プロジェクト内絶対パス）
+4. 相対パス（`./`, `../`）
+
+**型 import:**
+- 型のみを import する場合は必ず `import type` を使用
+- 値と型を混在させる場合も `import type` で分離する（例: `runner.ts` では型 import を先にまとめ、値 import を後に置く）
 
 **パスエイリアス:**
-- `@/*` は `next/` ディレクトリルートを指す（`next/tsconfig.json` で定義）
-- 例: `@/lib/article`, `@/config/sources`, `@/components/article-list`
-
-## インターフェース設計（依存性注入）
-
-**Deps パターン:**
-クラスコンストラクタは単一の `Deps` インターフェースを受け取る。これによりテストでの差し替えが容易になる。
+- `@/*`: `next/` ディレクトリ以下のすべてのファイルに使用可能（`tsconfig.json` の `paths` で定義）
 
 ```typescript
-// 実装例: next/scripts/collector/lib/markdown-writer.ts
-export interface MarkdownWriterDeps {
-  contentDir: string;
-  fileSystem: FileSystem;
-  slugBuilder: SlugBuilder;
-}
+// 正しい import 順序の例
+import path from "node:path";
 
-export class MarkdownWriter {
-  constructor(deps: MarkdownWriterDeps) { ... }
-}
+import matter from "gray-matter";
+import { describe, expect, it } from "vitest";
+
+import { ArticleSchema } from "@/lib/article";
+import type { Article } from "@/lib/article";
+
+import { SlugBuilder } from "../lib/slug-builder";
+import { InMemoryFileSystem } from "./in-memory-file-system";
 ```
-
-**デフォルト実装:**
-モジュールレベルのシングルトンとして `default*` 名のインスタンスをエクスポート:
-- `next/scripts/collector/lib/http-client.ts`: `export const defaultHttpClient: HttpClient = new DefaultHttpClient();`
-- `next/scripts/collector/lib/file-system.ts`: `export const defaultFileSystem: FileSystem = new DefaultFileSystem();`
-- `next/lib/articles.ts`: `export const articleRepository: ArticleRepository = new FsArticleRepository();`
-
-## バリデーションパターン
-
-**Zod を使用したスキーマ定義:**
-入力データは必ず zod スキーマで検証する。
-
-```typescript
-// 実装例: next/lib/article.ts
-export const ArticleSchema = z.object({
-  id: z.string().min(1),
-  url: z.string().url(),
-  publishedAt: z.string().datetime({ offset: true }),
-  ...
-});
-export type Article = z.infer<typeof ArticleSchema>;
-```
-
-スキーマは設定ファイル（`next/config/sources.ts`）でも同様に使用する。
 
 ## エラーハンドリング
 
-**戦略:**
-- I/O エラーは原則として呼び出し元に伝播させる（`throw`）
-- 複数ソースの処理ループでは、1 ソースのエラーが他に影響しないよう `try/catch` で囲む（`next/scripts/collector/runner.ts`）
-- ファイル存在確認に `try/catch` パターン使用（`DefaultFileSystem.exists`）
+**パターン:**
+- バリデーションには zod を使用し、`schema.parse()` によりランタイムで型を保証する
+- エラーをキャッチする際は `err instanceof Error ? err.message : String(err)` でメッセージを取り出す
+- サービス層（`SourceFetcher` 実装）では例外を `logger.warn` でログし処理を継続する
+- 致命的なエラー（フロントマター不正など）は `throw new Error(contextualMessage)` で上位に伝播させる
 
-**エラーメッセージ:**
 ```typescript
-// ファイルパスを含めた詳細なエラーメッセージ
-throw new Error(`Invalid frontmatter in ${filePath}: ${message}`);
-
-// 状態チェックエラー
-throw new Error("Deduplicator must be initialized before filterNew()");
-```
-
-**`errorMessage` ヘルパー:**
-- `next/scripts/collector/sources/rss-mapping.ts` に `errorMessage(err: unknown): string` 関数を定義
-- `unknown` 型の例外を安全に文字列化
-
-## ロギング
-
-**Logger インターフェース:**
-- `next/scripts/collector/logger.ts` に `Logger` インターフェースを定義
-- `info`, `warn`, `error` の 3 レベル
-- 構造化コンテキスト: `logger.info("collector", "dedup initialized", { knownUrls: 42 })`
-- `DefaultLogger` はログ行をフォーマットして出力し、`getReports()` でログ一覧を取得可能
-
-**シークレットのスクラビング:**
-- `DefaultLogger` は内部で `SecretScrubber`（`next/scripts/collector/lib/secret-scrubber.ts`）を使用
-- Bearer トークン・API キーなどをログに出力する前に `[REDACTED]` に置換
-
-## React コンポーネント
-
-**Props インターフェース:**
-ファイル内のみで使用する場合は `export` しない:
-```typescript
-// 実装例: next/components/header.tsx
-interface HeaderProps {
-  stats: PageStats;
+// エラーメッセージ取り出しのパターン（rss-mapping.ts から）
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
 }
-export function Header({ stats }: HeaderProps) { ... }
+
+// バリデーションエラーの伝播パターン（articles.ts から）
+try {
+  articles.push(fromFrontmatter(parsed.data));
+} catch (err) {
+  const message = err instanceof Error ? err.message : String(err);
+  throw new Error(`Invalid frontmatter in ${filePath}: ${message}`);
+}
 ```
 
-**データ取得:**
-- Next.js の Server Component で直接 `async` 関数として実装（`next/app/page.tsx`）
-- クライアントコンポーネントは存在しない（現時点では全て Server Component）
+## ログ
 
-**テスト属性:**
-E2E テスト用に `data-testid` 属性を付与:
-- `data-testid="header-article-count"`
-- `data-testid="footer-last-updated"`
-- `data-testid="article-link"`
+**フレームワーク:** カスタム `Logger` インターフェース（`next/scripts/collector/logger.ts`）
 
-## モジュール構成
+**パターン:**
+- `logger.info / warn / error(source, message, context?)` の形式で呼び出す
+- `source` は `SourceId`（`"zenn"` 等）または `"collector"` を使用
+- `context` はキーバリューのプレーンオブジェクト（例: `{ url, status, count }`）
+- ログ出力前に `SecretScrubber` でシークレット情報を自動マスク
 
-**エクスポートパターン:**
-- named export を使用（default export は React コンポーネントと設定ファイルのみ）
-- バレルファイル（`index.ts`）は使用しない
-
-**定数の配置:**
-モジュールスコープの定数は関数定義の上に配置:
 ```typescript
-const MILLIS_PER_DAY = 24 * 60 * 60 * 1000;
-const FILENAME_DATE_PREFIX = /^(\d{4}-\d{2}-\d{2})-/;
+// ログ呼び出しパターン
+logger.info("collector", "start");
+logger.warn(this.source, "non-2xx response", { url, status: response.status });
+logger.error(source, "fetch failed", { error: message });
 ```
 
-**イミュータビリティ:**
-- 入力配列は変更しない（`[...articles].sort(...)`）
-- クラスフィールドは `private readonly` または `readonly`
+## コメント
+
+**コメントを書くタイミング:**
+- 非自明なビジネスロジックに対してインラインコメントを使用
+- TODOコメントは存在しない（コードベース全体で未検出）
+
+**例:**
+```typescript
+// Deduplicator only inspects URL, so a placeholder collectedAt is fine.
+const placeholder = "1970-01-01T00:00:00+00:00";
+```
+
+## 関数設計
+
+**サイズ・責務:**
+- 関数は単一の責務を持つ
+- 純粋関数（副作用なし）を優先し、副作用はクラスのメソッドに閉じ込める
+
+**パラメータ:**
+- 依存を多く持つクラスのコンストラクタは `deps` オブジェクト一つで受け取る
+- オプション引数にはデフォルト値を設定する（例: `now: Date = new Date()`）
+
+**戻り値:**
+- 変換系関数は元の配列を変異させない（`[...input].sort(...)` パターン）
+- 空の結果には空配列 `[]` を返す（null / undefined を使わない）
+
+## モジュール設計
+
+**エクスポート:**
+- Named export のみ使用（default export を避ける）
+- ただし Next.js App Router の Page コンポーネントは default export（フレームワーク要求）
+
+**インターフェース分離:**
+- `FileReader`（読み取り専用）と `FileSystem`（読み書き）を別インターフェースで定義
+  - `next/lib/articles.ts`: `FileReader`
+  - `next/scripts/collector/lib/file-system.ts`: `FileReader` を継承した `FileSystem`
+- `HttpClient` インターフェースを定義し、本番実装 (`DefaultHttpClient`) とテスト用 (`RecordingHttpClient`) を差し替え可能にする
+
+**シングルトン（モジュールレベルのインスタンス）:**
+- `defaultHttpClient` (`http-client.ts`)、`defaultFileSystem` (`file-system.ts`)、`articleRepository` (`articles.ts`) はモジュールレベルで定数として公開する
+
+**Zod スキーマ駆動の型定義:**
+```typescript
+// スキーマを定義して型を推論させる
+export const ArticleSchema = z.object({ ... });
+export type Article = z.infer<typeof ArticleSchema>;
+```
 
 ---
 
-*規約分析日: 2026-05-30*
+*規約分析: 2026-05-30*

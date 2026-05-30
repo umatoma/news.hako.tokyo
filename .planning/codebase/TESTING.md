@@ -4,77 +4,148 @@
 
 ## テストフレームワーク
 
-**ユニットテスト / 統合テストランナー:**
-- Vitest 2.x
+**ユニット/統合テストランナー:**
+- vitest 2.x
 - 設定ファイル: `next/vitest.config.ts`
-- 実行環境: `node`（ブラウザ環境ではない）
-- `@` エイリアスは `next/` ディレクトリルートに解決
 
-**プロパティベーステスト (PBT) ライブラリ:**
+**プロパティベーステスト (PBT):**
 - fast-check 3.x
 
-**E2E テストフレームワーク:**
-- Playwright 1.48.x
+**E2E テスト:**
+- @playwright/test 1.x
 - 設定ファイル: `next/playwright.config.ts`
-- ブラウザ: Chromium のみ
+
+**アサーションライブラリ:**
+- vitest 組み込み (`expect`)
 
 **実行コマンド:**
 ```bash
-npm run test          # watch モードで実行
-npm run test:run      # 一度だけ実行（CI 用）
-npm run test:watch    # watch モードで実行
-npm run test:e2e      # Playwright E2E テスト
+cd next
+npm test               # vitest (watch モード)
+npm run test:run       # vitest run (CI 向け one-shot)
+npm run test:watch     # vitest watch (明示的 watch)
+npm run test:e2e       # playwright test
+npm run test:e2e:install  # playwright の Chromium インストール
 ```
 
-## テストファイルの構成
+## テストファイルの配置
 
-**ユニット／統合テストの配置:**
-- ライブラリコード: `next/lib/` 直下にテストを同居
-  - `next/lib/articles.test.ts`（通常テスト）
-  - `next/lib/articles.pbt.test.ts`（プロパティベーステスト）
-- Collector スクリプト: `next/scripts/collector/test/` ディレクトリに集約
-  - 対象モジュール別に `{module}.test.ts` と `{module}.pbt.test.ts` を分離
+**ユニット/統合テスト:**
+- テスト対象と同じディレクトリか、または `test/` サブディレクトリに配置
+  - `next/lib/articles.test.ts` → `next/lib/articles.ts` と同階層
+  - `next/scripts/collector/test/*.test.ts` → `next/scripts/collector/` 配下のソースに対応
 
-**E2E テストの配置:**
-- `next/e2e/` ディレクトリ
-- ファイル拡張子: `.spec.ts`（例: `next/e2e/home.spec.ts`）
+**プロパティベーステスト (PBT):**
+- ファイル名に `.pbt.test.ts` サフィックスを付けて通常テストと区別する
+  - 例: `next/lib/articles.pbt.test.ts`, `next/scripts/collector/test/article.pbt.test.ts`
 
-**テスト用ヘルパーの配置:**
-- `next/scripts/collector/test/generators/` — fast-check アービトラリ（ランダムデータ生成器）
-  - `article.gen.ts`, `rss-item.gen.ts`, `url.gen.ts`
-- `next/scripts/collector/test/in-memory-file-system.ts` — `FileSystem` インターフェースのインメモリ実装
-- `next/scripts/collector/test/recording-http-client.ts` — `HttpClient` インターフェースのスタブ実装
+**E2E テスト:**
+- `next/e2e/` ディレクトリに集約
+- ファイル名: `{対象ページ}.spec.ts`（例: `next/e2e/home.spec.ts`）
 
-## テストの構造
+**テストヘルパー・フィクスチャ:**
+- `next/scripts/collector/test/` に共有ヘルパーを置く
+  - `in-memory-file-system.ts`: `InMemoryFileSystem` クラス
+  - `recording-http-client.ts`: `RecordingHttpClient` クラス
+  - `generators/`: fast-check Arbitrary 生成関数（`article.gen.ts`, `rss-item.gen.ts`, `url.gen.ts`）
 
-**通常テスト（example-based）のパターン:**
+**ディレクトリ構成:**
+```
+next/
+├── lib/
+│   ├── articles.test.ts          # articles.ts のユニットテスト
+│   └── articles.pbt.test.ts      # articles.ts の PBT
+├── e2e/
+│   └── home.spec.ts              # E2E テスト
+└── scripts/collector/
+    ├── test/
+    │   ├── in-memory-file-system.ts   # テスト用 FileSystem 実装
+    │   ├── recording-http-client.ts   # テスト用 HttpClient 実装
+    │   ├── article.test.ts
+    │   ├── article.pbt.test.ts
+    │   ├── deduplicator.test.ts
+    │   ├── deduplicator.pbt.test.ts
+    │   ├── http-client.test.ts
+    │   ├── markdown-writer.test.ts
+    │   ├── markdown-writer.pbt.test.ts
+    │   ├── runner.test.ts
+    │   ├── slug-builder.test.ts
+    │   ├── url-normalize.test.ts
+    │   ├── url-normalize.pbt.test.ts
+    │   ├── secret-scrubber.test.ts
+    │   ├── article-id.test.ts
+    │   ├── article-id.pbt.test.ts
+    │   ├── sources/
+    │   │   ├── zenn-rss-fetcher.test.ts
+    │   │   ├── hatena-rss-fetcher.test.ts
+    │   │   ├── togetter-scraper.test.ts
+    │   │   └── google-news-rss-fetcher.test.ts
+    │   └── generators/
+    │       ├── article.gen.ts
+    │       ├── rss-item.gen.ts
+    │       └── url.gen.ts
+```
+
+## テスト構造
+
+**スイート構成:**
 ```typescript
-import { describe, expect, it, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
-describe("ClassName または functionName", () => {
-  // テストダブルの準備（beforeEach で再初期化）
-  let fs: InMemoryFileSystem;
-
-  beforeEach(() => {
-    fs = new InMemoryFileSystem();
-  });
-
-  it("動作を日本語または英語で説明する", () => {
-    const result = functionUnderTest(input);
-    expect(result).toEqual(expected);
-  });
-
-  it("throws when precondition violated", () => {
-    expect(() => fn()).toThrow(/error pattern/);
+describe("クラス名/関数名", () => {
+  // ネストされた describe でサブケースをグループ化
+  describe("メソッド名", () => {
+    it("具体的な振る舞いの説明", () => {
+      // arrange → act → assert
+    });
   });
 });
 ```
 
-**グローバル beforeEach / afterEach の使用例:**
+**セットアップ:**
 ```typescript
-// vi.stubGlobal を使う場合は afterEach でリセット
+// beforeEach でテスト間の状態を初期化する
 beforeEach(() => {
-  fetchMock = vi.fn(async () => new Response(...));
+  fs = new InMemoryFileSystem();
+  writer = new MarkdownWriter({
+    contentDir: CONTENT_DIR,
+    fileSystem: fs,
+    slugBuilder: new SlugBuilder(),
+  });
+});
+```
+
+**テストデータ（サンプルオブジェクト）:**
+```typescript
+// モジュールレベルの定数として定義する
+const sample: Article = ArticleSchema.parse({
+  id: "k9xr2p1m3qaztb47",
+  title: "Sample",
+  url: "https://example.com/x",
+  source: "zenn",
+  publishedAt: "2026-04-25T07:00:00+09:00",
+  collectedAt: "2026-04-25T22:05:12+09:00",
+  summary: "S",
+  tags: [],
+  thumbnailUrl: null,
+});
+```
+
+## モック
+
+**フレームワーク:** vitest 組み込みの `vi`（グローバル置換）
+
+**パターン:**
+
+```typescript
+// グローバルの fetch をモックする
+beforeEach(() => {
+  fetchMock = vi.fn(async () =>
+    new Response("<rss/>", {
+      status: 200,
+      headers: { "content-type": "application/rss+xml" },
+    }),
+  );
   vi.stubGlobal("fetch", fetchMock);
 });
 
@@ -83,225 +154,161 @@ afterEach(() => {
 });
 ```
 
-## モック
+**インターフェース差し替えパターン（推奨）:**
+- `vi.mock()` よりも、インターフェースに対するフェイク実装クラスを使う
+- `InMemoryFileSystem` (`test/in-memory-file-system.ts`): `FileSystem` インターフェースのインメモリ実装
+- `RecordingHttpClient` (`test/recording-http-client.ts`): `HttpClient` インターフェースの記録付き実装
+- `fixedClock` (`lib/clock.ts`): 固定時刻を返す `Clock` 関数ファクトリ
 
-**モック戦略:**
-外部依存（HTTP・ファイルシステム・クロック）は **インターフェース差し替え** で対応する。`vi.mock()` によるモジュールモックは最小限。
-
-**`vi.stubGlobal` の使用:**
-グローバル `fetch` のみ `vi.stubGlobal` でモックする（`next/scripts/collector/test/http-client.test.ts`）:
 ```typescript
-fetchMock = vi.fn(async () => new Response("<rss/>", { status: 200, ... }));
-vi.stubGlobal("fetch", fetchMock);
-// テスト後
-vi.unstubAllGlobals();
-```
-
-**`RecordingHttpClient`（`next/scripts/collector/test/recording-http-client.ts`）:**
-`HttpClient` インターフェースを実装したスタブ。URL→レスポンスのマップを事前登録し、呼び出し履歴を `calls` 配列に記録する:
-```typescript
+// テスト用フェイクの使い方
 const http = new RecordingHttpClient({
-  "https://zenn.dev/feed": zennXml,
-  "https://b.hatena.ne.jp/hotentry/it.rss": { status: 500, body: "boom", headers: {} },
+  "https://zenn.dev/feed": zennXml,  // URL → レスポンスのマッピング
 });
-// 後から確認
-expect(http.calls).toHaveLength(1);
-```
-
-**`InMemoryFileSystem`（`next/scripts/collector/test/in-memory-file-system.ts`）:**
-`FileSystem` インターフェースを実装したインメモリ実装。`files` マップにファイル内容を直接セットできる:
-```typescript
 const fs = new InMemoryFileSystem();
-fs.files.set("/fake/content/article.md", markdownContent);
-```
-
-**`fixedClock`（`next/scripts/collector/lib/clock.ts`）:**
-テスト用の固定時刻クロック:
-```typescript
 const clock = fixedClock("2026-04-25T22:00:00Z");
+const logger = new DefaultLogger({ out: () => undefined }); // 出力を抑制
 ```
 
-**モックするもの:**
-- HTTP クライアント（`RecordingHttpClient`）
-- ファイルシステム（`InMemoryFileSystem`）
-- クロック（`fixedClock`）
-- グローバル `fetch`（`vi.stubGlobal`）
-- ロガー出力（`new DefaultLogger({ out: () => undefined })`）
+**モックすべき対象:**
+- 外部 HTTP リクエスト（`fetch` グローバル、または `HttpClient` インターフェース）
+- ファイルシステム操作（`FileSystem` インターフェース）
+- システム時刻（`Clock` 型）
+- ログ出力（`DefaultLogger` に `out: () => undefined` を渡す）
 
-**モックしないもの:**
-- ビジネスロジック関数（純粋関数はそのまま呼ぶ）
-- Zod スキーマ
-- 実装クラスの内部ロジック
+**モックしない対象:**
+- ドメインロジック（純粋関数）
+- zod スキーマバリデーション
+- アルゴリズム系ユーティリティ（URL 正規化、slug 生成など）
 
-## フィクスチャとファクトリ
+## フィクスチャとジェネレータ
 
-**サンプルオブジェクトパターン:**
-テストファイル先頭でスキーマ検証済みのサンプルオブジェクトを定義:
+**fast-check Arbitrary:**
 ```typescript
-const sampleArticle = ArticleSchema.parse({
-  id: "k9xr2p1m3qaztb47",
-  title: "Zenn の RSS フィードの使い方",
-  url: "https://zenn.dev/foo/articles/bar",
-  source: "zenn",
-  publishedAt: "2026-04-25T07:00:00+09:00",
-  collectedAt: "2026-04-25T22:05:12+09:00",
-  summary: "...",
-  tags: [],
-  thumbnailUrl: null,
-});
-```
-
-**ファクトリ関数パターン:**
-テスト内でサンプルオブジェクトをスプレッドして部分的に変更:
-```typescript
-function makeArticle(url: string): Article {
-  return { ...sample, url };
-}
-function articleAt(date: string, idSuffix: string): Article {
-  return ArticleSchema.parse({ ...sample, publishedAt: `${date}T07:00:00+09:00` });
-}
-```
-
-**`InMemoryFileReader`（`next/lib/articles.test.ts`）:**
-`FileReader` インターフェースのインメモリ実装（テストファイル内にローカルで定義）。
-
-## プロパティベーステスト (PBT)
-
-**フレームワーク:** fast-check 3.x
-
-**ファイル命名:** `{対象}.pbt.test.ts`（通常テストとは分離）
-
-**テストスイート名に `(PBT-02)` / `(PBT-03)` などのルール ID を付ける:**
-```typescript
-describe("Article frontmatter round-trip (PBT-02)", () => { ... });
-describe("sortArticlesForDisplay (PBT-03)", () => { ... });
-```
-
-**使用パターン:**
-
-同期プロパティ:
-```typescript
-fc.assert(
-  fc.property(articleArbitrary, (article) => {
-    const round = fromFrontmatter(toFrontmatter(article));
-    return JSON.stringify(round) === JSON.stringify(article);
-  }),
-  { numRuns: 100 },
-);
-```
-
-非同期プロパティ:
-```typescript
-fc.assert(
-  fc.asyncProperty(articleArbitrary, async (article) => {
+// next/scripts/collector/test/generators/article.gen.ts
+export const articleArbitrary: fc.Arbitrary<Article> = fc
+  .record({
+    title: titleArbitrary,
+    url: cleanUrlArbitrary,
+    source: fc.constantFrom(...ARTICLE_SOURCES),
+    publishedAt: isoDateArbitrary,
+    collectedAt: isoDateArbitrary,
     // ...
-    return condition;
-  }),
-  { numRuns: 100 },
-);
+  })
+  .map(({ title, url, source, ... }) => ({
+    id: generateArticleId(url),
+    // ...
+  }));
 ```
 
-**アービトラリ（乱数生成器）の配置:**
-- `next/scripts/collector/test/generators/article.gen.ts` — `articleArbitrary`
-- `next/scripts/collector/test/generators/rss-item.gen.ts` — `rssItemArbitrary`, `renderRssXml`
-- `next/scripts/collector/test/generators/url.gen.ts` — `urlArbitrary`, `cleanUrlArbitrary`
-- lib テスト用のアービトラリは同じファイル内にインラインで定義することもある
+**ジェネレータの場所:**
+- `next/scripts/collector/test/generators/article.gen.ts`
+- `next/scripts/collector/test/generators/rss-item.gen.ts`
+- `next/scripts/collector/test/generators/url.gen.ts`
 
-**PBT で検証する性質の種別:**
-| 種別 | 説明 | 実装例 |
-|------|------|--------|
-| ラウンドトリップ (PBT-02) | `f_inverse(f(x)) = x` | `fromFrontmatter(toFrontmatter(a)) === a` |
-| 不変条件 (PBT-03) | 操作後も成立する性質 | `sort` 後の長さ保存、順序保証 |
-| 冪等性 (PBT-04) | `f(f(x)) = f(x)` | `normalizeUrlForDedup` の冪等性 |
-| 単調性 | 条件が緩くなれば結果が増えない | 日数を増やすと記事が除外されない |
+**共有フィクスチャの使い方:**
+- 複数のテストファイルから `articleArbitrary` を import して再利用する（例: `lib/articles.pbt.test.ts` と `scripts/collector/test/article.pbt.test.ts`）
 
-**numRuns:**
-- 通常テスト: 100 回
-- 重要な性質: 200 回（URL / ID 生成など）
+## カバレッジ
 
-## E2E テスト
+**要件:** 明示的な閾値設定なし
 
-**フレームワーク:** Playwright
+**カバレッジ確認:**
+```bash
+cd next
+npx vitest run --coverage
+```
 
-**テストファイルの場所:** `next/e2e/*.spec.ts`
+## テスト種別
 
-**構造パターン:**
+**ユニットテスト:**
+- 単一の関数・クラスを対象とする
+- 依存はすべてフェイク/モックで置き換える
+- `describe("関数名") > it("具体的な振る舞い")` の構造
+
+**プロパティベーステスト (PBT):**
+- `*.pbt.test.ts` ファイルに分離する
+- fast-check の `fc.property` / `fc.asyncProperty` を使用する
+- `numRuns: 100` 以上を設定する
+- テストケース名に `(PBT-XX)` サフィックスを付けて識別する（例: `PBT-02`, `PBT-03`）
+- 検証すべきプロパティ（不変条件）:
+  - 出力が入力のサブセットであること
+  - 変換がラウンドトリップ可能であること（`fromFrontmatter(toFrontmatter(a)) === a`）
+  - ソート後の順序不変条件
+  - 単調性（より緩い条件で除外されなかったアイテムはより厳しい条件でも除外されない等）
+
 ```typescript
-import { expect, test } from "@playwright/test";
-
-test.describe("ページ名 (パス)", () => {
-  test("期待する動作の説明", async ({ page }) => {
-    await page.goto("/");
-    const element = page.getByTestId("data-testid-value");
-    await expect(element).toBeVisible();
+// PBT の基本パターン
+describe("sortArticlesForDisplay (PBT-03)", () => {
+  it("output ids are a permutation of input ids", () => {
+    fc.assert(
+      fc.property(
+        fc.array(articleArbitrary, { maxLength: 30 }),
+        (articles) => {
+          const out = sortArticlesForDisplay(articles);
+          const inIds = articles.map((a) => a.id).sort();
+          const outIds = out.map((a) => a.id).sort();
+          return JSON.stringify(inIds) === JSON.stringify(outIds);
+        },
+      ),
+      { numRuns: 100 },
+    );
   });
 });
 ```
 
-**ロケータ:**
-- `getByTestId(...)` を優先して使用
-- `data-testid` 属性はソースコードで付与（例: `next/components/header.tsx`, `next/components/article-list-item.tsx`）
-
-**Web サーバー:**
-- `npm start` で起動したサーバーに対してテストを実行
-- CI 以外では既存サーバーを再利用（`reuseExistingServer: !process.env["CI"]`）
-- ベース URL: `http://localhost:3000`
-
-## カバレッジ
-
-**要件:** 明示的なカバレッジ目標は設定されていない
-
-**カバレッジ確認:**
-```bash
-# vitest にはカバレッジコマンドが別途設定されていない
-# 必要に応じて以下を使用:
-npx vitest run --coverage
-```
-
-## テストの種別と範囲
-
-**ユニットテスト:**
-- 純粋関数（ビジネスロジック、データ変換）を単独でテスト
-- 対象: `next/lib/articles.ts`, `next/scripts/collector/lib/` 以下の各モジュール
-- インターフェース差し替えにより I/O を排除
-
 **統合テスト:**
-- 複数のコンポーネントを協調動作させてテスト
-- 対象: `next/scripts/collector/test/runner.test.ts`（CollectorRunner の end-to-end フロー）
-- インメモリ実装で外部 I/O を除外しつつ、実際のクラスを組み合わせる
+- 複数のコンポーネントを組み合わせてテストする（例: `runner.test.ts` では `CollectorRunner` + `Deduplicator` + `MarkdownWriter` を組み合わせる）
+- インフラ層のみフェイクで置き換え（HTTP、FS、Clock）、ドメイン層は実装を使用する
 
 **E2E テスト:**
-- 実際のブラウザとサーバーを使用
-- 対象: `next/e2e/home.spec.ts`（ホームページの主要な表示要件）
+- `@playwright/test` を使用
+- `next/e2e/` に配置
+- `page.goto("/")` でページを表示し、`data-testid` 属性でロケータを取得する
+- 対象ブラウザ: Chromium のみ
+- CI ではワーカー数を 1 に制限、リトライ 1 回
 
-## 非同期テストパターン
-
-**`async/await` を使用:**
 ```typescript
-it("reads articles from file system", async () => {
-  const result = await repo.getAllArticles();
-  expect(result).toHaveLength(1);
+// E2E テストのパターン
+test.describe("Home page (/)", () => {
+  test("renders header with article count", async ({ page }) => {
+    await page.goto("/");
+    const count = page.getByTestId("header-article-count");
+    await expect(count).toBeVisible();
+    await expect(count).toContainText("件");
+  });
 });
 ```
 
-**Promise を reject することの確認:**
+## 非同期テスト
+
 ```typescript
+// async/await を使う（コールバックスタイルは使わない）
+it("parses markdown files and returns Article[]", async () => {
+  const repo = new FsArticleRepository({ contentDir: dir, fileReader: reader });
+  const articles = await repo.getAllArticles();
+  expect(articles).toHaveLength(1);
+});
+
+// rejects の検証
 await expect(repo.getAllArticles()).rejects.toThrow(/Invalid frontmatter/);
 ```
 
-## エラーのテストパターン
+## エラーテスト
 
-**同期例外:**
 ```typescript
+// 同期的な例外の検証
 expect(() => dedup.filterNew([])).toThrow();
-expect(() => fromFrontmatter(invalidData)).toThrow();
-```
 
-**非同期例外:**
-```typescript
-await expect(repo.getAllArticles()).rejects.toThrow(/Invalid frontmatter in/);
+// 非同期例外の検証
+await expect(repo.getAllArticles()).rejects.toThrow(/Invalid frontmatter/);
+
+// バリデーションエラー（zod）の検証
+expect(() =>
+  fromFrontmatter({ id: "x", title: "t", url: "not-a-url", /* ... */ }),
+).toThrow();
 ```
 
 ---
 
-*テスト分析日: 2026-05-30*
+*テスト分析: 2026-05-30*
