@@ -1,12 +1,16 @@
 ---
-gsd_state_version: '1.0'
-status: planning
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: executing
+last_updated: "2026-05-30T14:59:24.773Z"
+last_activity: 2026-05-30
 progress:
   total_phases: 1
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 1
+  completed_plans: 1
+  percent: 100
 ---
 
 # プロジェクト状態
@@ -21,27 +25,29 @@ progress:
 ## 現在の位置
 
 Phase: 1 of 1（ソース別タブ UI）
-Plan: 0 of TBD（現フェーズ内）
-Status: Ready to plan
-Last activity: 2026-05-30 — ロードマップ作成、プランニング準備完了
+Plan: 1 of 1（現フェーズ内）
+Status: Phase 01 完了
+Last activity: 2026-05-30
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██████████] 100%
 
 ## パフォーマンス指標
 
 **ベロシティ:**
-- 完了プラン総数: 0
-- 平均所要時間: —
-- 累計実行時間: —
+
+- 完了プラン総数: 1
+- 平均所要時間: 約10分
+- 累計実行時間: 約10分
 
 **フェーズ別:**
 
 | フェーズ | プラン数 | 合計 | プラン平均 |
 |----------|---------|------|----------|
-| - | - | - | - |
+| 01-ui | 1 | 約10分 | 約10分 |
 
 **直近トレンド:**
-- 直近5プラン: —
+
+- 直近5プラン: 01-01（約10分）
 - トレンド: —
 
 *各プラン完了後に更新*
@@ -57,6 +63,8 @@ Progress: [░░░░░░░░░░] 0%
 - クライアント内切り替えのみ（URL 非連携）
 - 直近3日フィルタは既存挙動を維持
 - 件数バッジなし・空の場合はメッセージ表示
+- articles.ts の node:fs 依存を Client Component から分離するため source-tabs-utils.ts を追加（re-export パターン）
+- source-tabs.test.tsx は @testing-library/react なしでロジックテストとして実装
 
 ### 保留中 Todo
 
@@ -69,5 +77,5 @@ Progress: [░░░░░░░░░░] 0%
 ## セッション継続性
 
 Last session: 2026-05-30
-Stopped at: ロードマップ作成完了。次: `/gsd-plan-phase 1`
+Stopped at: フェーズ 01 プラン 01（ソース別タブ UI）完了
 Resume file: None
