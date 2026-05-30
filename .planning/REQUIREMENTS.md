@@ -35,23 +35,23 @@
 | 表示期間（直近3日）の変更・ソース別の期間調整 | 既存挙動を維持し、今回のスコープ外 |
 | `Article` モデルへの新フィールド追加 | 既存の `SourceId` を利用するため不要 |
 
-## Traceability
+## トレーサビリティ
 
-どのフェーズがどの要件をカバーするか。ロードマップ作成時に更新される。
+どのフェーズがどの要件をカバーするか。
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SRC-01 | TBD | Pending |
-| SRC-02 | TBD | Pending |
-| SRC-03 | TBD | Pending |
-| SRC-04 | TBD | Pending |
-| SRC-05 | TBD | Pending |
+| SRC-01 | Phase 1 | Pending |
+| SRC-02 | Phase 1 | Pending |
+| SRC-03 | Phase 1 | Pending |
+| SRC-04 | Phase 1 | Pending |
+| SRC-05 | Phase 1 | Pending |
 
-**Coverage:**
-- v1 requirements: 5 total
-- Mapped to phases: 0（ロードマップ作成時に更新）
-- Unmapped: 5 ⚠️
+**カバレッジ:**
+- v1 要件: 5件
+- フェーズにマッピング済み: 5件 ✓
+- 未マッピング: 0件
 
 ---
 *Requirements defined: 2026-05-30*
-*Last updated: 2026-05-30 after initial definition*
+*Last updated: 2026-05-30 — ロードマップ作成によりトレーサビリティを更新*
