@@ -1,128 +1,114 @@
-# External Integrations
+# 外部連携
 
-**Analysis Date:** 2026-05-30
+**分析日:** 2026-05-30
 
-## APIs & External Services
+## API・外部サービス
 
-**RSS/Atom Feed Sources (read-only, no auth):**
-- Zenn.dev - Fetches technology articles via RSS
-  - SDK/Client: `rss-parser` npm package
-  - Feed URL: `https://zenn.dev/feed` (configured in `next/config/sources.ts`)
-  - Auth: None required
-  - Fetcher: `next/scripts/collector/sources/zenn-rss-fetcher.ts`
+**ニュースソース（コレクター）:**
 
-- Hatena Bookmark - Fetches popular bookmarked articles via RSS
-  - SDK/Client: `rss-parser` npm package
-  - Feed URL: `https://b.hatena.ne.jp/hotentry.rss` (configured in `next/config/sources.ts`)
-  - Auth: None required
-  - Fetcher: `next/scripts/collector/sources/hatena-rss-fetcher.ts`
+- **Zenn RSS** — `https://zenn.dev/feed`
+  - 利用目的: 技術記事のフィード取得
+  - クライアント: `rss-parser` ライブラリ
+  - 実装: `next/scripts/collector/sources/zenn-rss-fetcher.ts`
+  - 設定: `next/config/sources.ts`（`zenn.feedUrls`）
+  - 認証: 不要
 
-- Google News - Fetches news articles via RSS search/topic/geo feeds
-  - SDK/Client: `rss-parser` npm package
-  - Feed URL pattern: `https://news.google.com/rss/search?q=...` and `https://news.google.com/news/rss/headlines/section/topic/...`
-  - Auth: None required
-  - Locale params: `hl=ja`, `gl=JP`, `ceid=JP:ja`
-  - Fetcher: `next/scripts/collector/sources/google-news-rss-fetcher.ts`
+- **はてなブックマーク RSS** — `https://b.hatena.ne.jp/hotentry.rss`
+  - 利用目的: ホットエントリー記事の取得
+  - クライアント: `rss-parser` ライブラリ
+  - 実装: `next/scripts/collector/sources/hatena-rss-fetcher.ts`
+  - 設定: `next/config/sources.ts`（`hatena.feedUrls`）
+  - 認証: 不要
 
-**Web Scraping (read-only, no auth):**
-- Togetter - Scrapes ranking/category pages for thread links using CSS selectors
-  - SDK/Client: `cheerio` npm package
-  - Target URL: `https://togetter.com/ranking` (configured in `next/config/sources.ts`)
-  - Auth: None required
-  - Rate limiting: `requestIntervalMs: 5000` between page requests (configurable)
-  - Scraper: `next/scripts/collector/sources/togetter-scraper.ts`
-  - HTTP client: `next/scripts/collector/lib/http-client.ts` (browser-like User-Agent: Chrome/140)
+- **Google News RSS** — `https://news.google.com/rss/search?q=...` / `https://news.google.com/news/rss/headlines/section/topic/...`
+  - 利用目的: 検索クエリ・トピック・地域別ニュースの取得
+  - クライアント: `rss-parser` ライブラリ
+  - 実装: `next/scripts/collector/sources/google-news-rss-fetcher.ts`
+  - 設定: `next/config/sources.ts`（`googlenews.queries`, `googlenews.topics`, `googlenews.geos`）
+  - 認証: 不要（公開 RSS エンドポイント）
 
-**Font CDN:**
-- Google Fonts - Served via Next.js `next/font/google` integration
-  - Fonts: Geist and Geist_Mono
-  - Usage: `next/app/layout.tsx`
-  - No API key required; loaded at build time by Next.js
+- **Togetter** — `https://togetter.com/ranking`
+  - 利用目的: ランキングページからまとめ記事をスクレイピング
+  - クライアント: `cheerio` ライブラリ（HTML スクレイピング）
+  - 実装: `next/scripts/collector/sources/togetter-scraper.ts`
+  - 設定: `next/config/sources.ts`（`togetter.targetUrls`）
+  - 認証: 不要
+  - 備考: リクエスト間隔制御あり（デフォルト 5000ms）
 
-## Data Storage
+**フォント:**
 
-**Databases:**
-- None. No database used.
+- **Google Fonts (Geist / Geist Mono)** — `next/font/google` 経由
+  - 利用目的: UI フォント
+  - 実装: `next/app/layout.tsx`
+  - 認証: 不要
 
-**Content Store (Filesystem):**
-- Markdown files in `content/` directory at repository root
-  - One `.md` file per collected article
-  - Frontmatter fields: `id`, `title`, `url`, `source`, `published_at`, `collected_at`, `summary`, `tags`, `thumbnail_url`
-  - Filename pattern: `YYYY-MM-DD-{slug}--{id-prefix}.md` (e.g., `content/2026-04-20-aws-amazon-web-services--3cip7v.md`)
-  - Read by: `next/lib/articles.ts` (`FsArticleRepository`)
-  - Written by: `next/scripts/collector/lib/markdown-writer.ts`
-  - `CONTENT_DIR` env var overrides default resolution logic in `next/lib/articles.ts`
+## データストレージ
 
-**Run Result JSON:**
-- `next/collector-result.json` - Written after each collector run by `JobSummaryReporter`
-  - Schema defined in `next/scripts/collector/lib/job-summary-reporter.ts`
-  - Also uploaded as GitHub Actions artifact (30-day retention)
+**データベース:**
+- 使用なし（データベース不採用）
 
-**File Storage:**
-- Local filesystem only; no cloud object storage
+**ファイルストレージ:**
+- ローカルファイルシステム — `content/` ディレクトリ（Markdown ファイル形式で記事を永続化）
+  - ファイル名パターン: `YYYY-MM-DD-<slug>.md`
+  - フロントマター形式: `gray-matter` ライブラリで読み書き
+  - 書き込み: `next/scripts/collector/lib/markdown-writer.ts`
+  - 読み込み: `next/lib/articles.ts`（`FsArticleRepository` クラス）
 
-**Caching:**
-- None (no Redis, Memcached, or CDN cache configuration detected)
+**キャッシュ:**
+- 使用なし（明示的なキャッシュ層なし）
 
-## Authentication & Identity
+**コレクター実行結果 JSON:**
+- `next/collector-result.json` — 直近実行の統計情報（フォーマット: `CollectorRunResult`）
+  - `next/scripts/collector/lib/job-summary-reporter.ts` で書き出し
+  - GitHub Actions アーティファクトとして 30 日間保持（`.github/workflows/collect.yml`）
 
-**Auth Provider:**
-- None. The site has no user authentication.
+## 認証・ID 管理
 
-## Monitoring & Observability
+- 認証プロバイダー: 使用なし（認証機能なし）
+- ユーザー管理: なし（個人用ニュース集約サイト）
 
-**Error Tracking:**
-- None (no Sentry, Datadog, or similar)
+## モニタリング・オブザーバビリティ
 
-**Logs:**
-- Structured console logging via `DefaultLogger` (`next/scripts/collector/logger.ts`)
-  - Format: `[LEVEL][source] message {...meta}` written to stdout/stderr
-  - Severity levels: `info`, `warn`, `error`
-  - Used only in the collector script; no application-level logging in the Next.js frontend
+**エラートラッキング:**
+- 外部サービスなし
 
-**CI Job Summaries:**
-- `JobSummaryReporter` appends Markdown summary to `$GITHUB_STEP_SUMMARY` when env var is set
-  - Implementation: `next/scripts/collector/lib/job-summary-reporter.ts`
+**ログ:**
+- コレクターは独自の `Logger` インターフェースを使用（`next/scripts/collector/logger.ts`）
+- `DefaultLogger` が `console.info` / `console.warn` / `console.error` へ書き出し
+- GitHub Actions ジョブサマリーへの Markdown レポート出力（`GITHUB_STEP_SUMMARY` 環境変数経由）
 
-**Secret Scanning:**
-- Gitleaks scans repository on every CI run (`.github/workflows/ci.yml`, `gitleaks/gitleaks-action@v2`)
+## CI/CD・デプロイ
 
-## CI/CD & Deployment
+**ホスティング:**
+- 明示的なデプロイ設定なし（Next.js 標準の出力形式）
 
-**Hosting:**
-- Not explicitly configured; no Vercel, Netlify, or server config files detected
-
-**CI Pipeline:**
+**CI パイプライン:**
 - GitHub Actions
-  - `ci.yml`: Runs on push to `main` and PRs
-    - Jobs: `static-checks` (lint + typecheck + unit tests), `build`, `e2e` (Playwright), `gitleaks`, `npm-audit`
-    - Node version from `.nvmrc`, npm cache keyed to `next/package-lock.json`
-  - `collect.yml`: Scheduled daily at `0 22 * * *` UTC (07:00 JST) + manual dispatch
-    - Runs collector script, commits changed `content/` files to `main`
-    - Push uses default `GITHUB_TOKEN` with `contents: write` permission
+  - `ci.yml` — push/PR 時に静的チェック（lint・型チェック・ユニットテスト）→ ビルド → E2E テストを順次実行
+  - `collect.yml` — 毎日 UTC 22:00（JST 07:00）に定期実行、もしくは手動トリガーでコレクターを起動し `content/` の変更を自動コミット＆プッシュ
+  - gitleaks によるシークレットスキャン（`ci.yml`）
+  - `npm audit` によるセキュリティ脆弱性チェック（`ci.yml`、`continue-on-error: true`）
 
-## Webhooks & Callbacks
+**GitHub Actions 利用シークレット・権限:**
+- `GITHUB_TOKEN`（gitleaks アクション向け）
+- `collect.yml` は `contents: write` 権限を使用（自動コミットプッシュのため）
 
-**Incoming:**
-- None
+## Webhook・コールバック
 
-**Outgoing:**
-- None (collector fetches data via HTTP GET; no webhook notifications sent)
+**受信:**
+- なし
 
-## Environment Configuration
+**送信:**
+- なし（外部への Webhook 送信はない）
 
-**Required env vars:**
-- None strictly required; all defaults are hardcoded
+## 環境変数一覧
 
-**Optional env vars:**
-- `CONTENT_DIR` - Override content directory path (used in `next/lib/articles.ts`)
-- `GITHUB_STEP_SUMMARY` - GitHub Actions-injected path for CI job summary Markdown output
-- `CI` - Standard CI flag affecting Playwright config (retries, workers, reporter)
-
-**Secrets location:**
-- No secrets in use. All external services (RSS feeds, Google News, Togetter) are public and unauthenticated.
-- Gitleaks enforces no accidental secret commits via CI.
+| 変数名 | 用途 | 必須 |
+|--------|------|------|
+| `CONTENT_DIR` | コンテンツディレクトリパスの上書き | 任意（デフォルト: `../content`） |
+| `GITHUB_STEP_SUMMARY` | GitHub Actions ジョブサマリーファイルパス | CI のみ |
+| `CI` | CI 環境判定フラグ（Playwright 挙動切り替え） | CI のみ |
 
 ---
 
-*Integration audit: 2026-05-30*
+*外部連携監査: 2026-05-30*

@@ -1,89 +1,78 @@
-# Technology Stack
+# 技術スタック
 
-**Analysis Date:** 2026-05-30
+**分析日:** 2026-05-30
 
-## Languages
+## 言語
 
-**Primary:**
-- TypeScript 5.x - All application code (`next/app/`, `next/lib/`, `next/components/`, `next/scripts/`, `next/config/`)
+**主要言語:**
+- TypeScript 5.x — アプリケーション全体（フロントエンド・コレクター・スクリプト）
+- CSS — スタイリング（Tailwind CSS v4 経由）
 
-**Secondary:**
-- CSS - Global styles (`next/app/globals.css`), Tailwind utility classes in components
-- CommonJS JavaScript - Single standalone script (`next/scripts/collector/compose-commit-message.cjs`) intentionally excluded from ESLint TypeScript rules
+**補助言語:**
+- JavaScript (CommonJS) — `next/scripts/collector/compose-commit-message.cjs`（GitHub Actions から node で直接実行）
 
-## Runtime
+## ランタイム
 
-**Environment:**
-- Node.js v24.13.1 (pinned via `.nvmrc` at repo root)
+**実行環境:**
+- Node.js v24.13.1（`.nvmrc` で固定）
 
-**Package Manager:**
-- npm 11.8.0
-- Lockfile: present (`next/package-lock.json`)
+**パッケージマネージャー:**
+- npm
+- ロックファイル: `next/package-lock.json`（コミット済み）
 
-## Frameworks
+## フレームワーク
 
-**Core:**
-- Next.js 16.2.4 - Full-stack React framework, App Router, server components (`next/app/`)
-- React 19.2.4 - UI component library (`next/components/`)
-- React DOM 19.2.4 - DOM rendering
+**コア:**
+- Next.js 16.2.4 — App Router ベースの SSR フロントエンド（`next/app/`）
+- React 19.2.4 / react-dom 19.2.4 — UI ライブラリ
 
-**CSS:**
-- Tailwind CSS 4.x - Utility-first CSS (`next/postcss.config.mjs`, `@tailwindcss/postcss` plugin)
-- PostCSS - CSS processing pipeline (`next/postcss.config.mjs`)
+**テスト:**
+- Vitest ^2.1.8 — ユニット・プロパティベーステスト（設定: `next/vitest.config.ts`）
+- Playwright ^1.48 — E2E テスト（設定: `next/playwright.config.ts`）
+- fast-check ^3.23.1 — プロパティベーステスト用アービトラリ
 
-**Testing:**
-- Vitest 2.1.8 - Unit and property-based test runner (`next/vitest.config.ts`)
-- Playwright 1.48.x - E2E browser testing (`next/playwright.config.ts`)
+**ビルド・開発:**
+- TypeScript tsc 5.x（型チェック: `next/tsconfig.json`）
+- ESLint 9 + eslint-config-next 16.2.4（設定: `next/eslint.config.mjs`）
+- Tailwind CSS ^4 + `@tailwindcss/postcss` ^4（設定: `next/postcss.config.mjs`）
+- tsx ^4.19.2 — TypeScript スクリプトを直接実行（コレクター起動用）
 
-**Build/Dev:**
-- tsx 4.19.2 - TypeScript execution for collector script (`npm run collect` → `tsx scripts/collector/index.ts`)
-- ESLint 9.x + eslint-config-next 16.2.4 - Linting (`next/eslint.config.mjs`)
-- TypeScript compiler (tsc) - Type checking only (`noEmit: true`)
+## 主要な依存ライブラリ
 
-## Key Dependencies
+**クリティカル:**
+- `zod` ^3.23.8 — スキーマ定義・バリデーション（記事モデル・ソース設定の型安全性）
+- `gray-matter` ^4.0.3 — Markdown フロントマターの読み書き（`next/lib/articles.ts`、`next/scripts/collector/lib/markdown-writer.ts`）
+- `rss-parser` ^3.13.0 — RSS/Atom フィードの解析（`next/scripts/collector/sources/rss-mapping.ts`）
+- `cheerio` ^1.0.0 — HTML スクレイピング（Togetter ページ解析: `next/scripts/collector/sources/togetter-scraper.ts`）
 
-**Critical:**
-- `next` 16.2.4 - Application framework; note: this version has breaking changes vs. prior versions per `next/AGENTS.md`
-- `react` / `react-dom` 19.2.4 - Required for all UI rendering
-- `zod` 3.23.8 - Runtime schema validation for `Article`, `ArticleFrontmatter`, and all source config types (`next/lib/article.ts`, `next/config/sources.ts`)
-- `gray-matter` 4.0.3 - Parses YAML frontmatter from content Markdown files (`next/lib/articles.ts`)
+**インフラ:**
+- `next/font/google` — Geist / Geist Mono フォント（CDN 経由: `next/app/layout.tsx`）
 
-**Infrastructure (collector script):**
-- `rss-parser` 3.13.0 - Parses RSS/Atom feeds from Zenn, Hatena, Google News (`next/scripts/collector/sources/rss-mapping.ts`)
-- `cheerio` 1.0.0 - HTML scraping for Togetter category pages (`next/scripts/collector/sources/togetter-scraper.ts`)
+## 設定
 
-**Dev/Testing:**
-- `fast-check` 3.23.1 - Property-based testing (used in `*.pbt.test.ts` files throughout `next/scripts/collector/test/` and `next/lib/`)
-- `@playwright/test` 1.48.x - E2E tests (`next/e2e/`)
+**環境変数:**
+- `CONTENT_DIR` — コンテンツディレクトリのパス上書き（未設定時は `../content` を使用: `next/lib/articles.ts`）
+- `GITHUB_STEP_SUMMARY` — GitHub Actions ジョブサマリーパス（コレクター: `next/scripts/collector/index.ts`）
+- `CI` — CI 判定フラグ（Playwright 設定で使用: `next/playwright.config.ts`）
 
-## Configuration
+**ビルド設定ファイル:**
+- `next/next.config.ts` — Next.js 設定（現時点では空のデフォルト設定）
+- `next/tsconfig.json` — TypeScript 設定（strict モード、パスエイリアス `@/*` → `./`）
+- `next/postcss.config.mjs` — PostCSS 設定（Tailwind CSS プラグイン）
+- `next/eslint.config.mjs` — ESLint flat config（next core-web-vitals + typescript ルール）
+- `next/vitest.config.ts` — Vitest 設定（`@` エイリアス、`**/*.test.ts` 対象）
+- `next/playwright.config.ts` — Playwright 設定（chromium のみ、baseURL: http://localhost:3000）
 
-**Environment:**
-- No `.env` files present in repository
-- `CONTENT_DIR` env var: overrides the default content directory path resolved in `next/lib/articles.ts`
-- `GITHUB_STEP_SUMMARY` env var: GitHub Actions-injected path for writing job summaries, consumed in `next/scripts/collector/index.ts`
-- `CI` env var: standard CI flag used by Playwright and ESLint config
+## プラットフォーム要件
 
-**Build:**
-- `next/next.config.ts` - Minimal Next.js config (no custom options set)
-- `next/tsconfig.json` - TypeScript strict mode, `ES2017` target, path alias `@/*` maps to `next/`
-- `next/postcss.config.mjs` - PostCSS with `@tailwindcss/postcss` plugin
-- `next/vitest.config.ts` - Vitest with `node` environment, includes all `**/*.test.ts`
-- `next/playwright.config.ts` - Playwright with Chromium only, `baseURL: http://localhost:3000`
-- `next/eslint.config.mjs` - ESLint using Next.js core-web-vitals + TypeScript presets
+**開発:**
+- Node.js v24.13.1（`.nvmrc` 参照）
+- npm（`next/` ディレクトリで `npm install`）
 
-## Platform Requirements
-
-**Development:**
-- Node.js v24.13.1 (see `.nvmrc`)
-- npm for dependency management
-- Chromium installation required for E2E tests (`npm run test:e2e:install`)
-
-**Production:**
-- Deployment target not explicitly configured; Next.js server deployment assumed
-- GitHub Actions handles automated collection and CI (see `.github/workflows/`)
-- Content stored as Markdown files in `content/` directory at repo root (filesystem-based, no database)
+**本番:**
+- デプロイ先は明示的に設定されていない（Vercel 等への静的/SSR デプロイを想定できる構成）
+- CI: GitHub Actions（`.github/workflows/ci.yml`）
 
 ---
 
-*Stack analysis: 2026-05-30*
+*スタック分析: 2026-05-30*

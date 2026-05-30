@@ -1,190 +1,218 @@
-# Codebase Structure
+# ディレクトリ構成
 
-**Analysis Date:** 2026-05-30
+**分析日:** 2026-05-30
 
-## Directory Layout
+## ディレクトリレイアウト
 
 ```
-news.hako.tokyo/          # Repo root
-├── content/              # Article data store — flat .md files (~878 files)
-├── next/                 # All application code (Next.js + collector)
-│   ├── app/              # Next.js App Router pages and layout
-│   ├── components/       # React UI components
-│   ├── config/           # Static source configuration (typed, Zod-validated)
-│   ├── e2e/              # Playwright end-to-end tests
-│   ├── lib/              # Shared domain types and repository
-│   ├── public/           # Static assets served by Next.js
+news.hako.tokyo/               # リポジトリルート
+├── content/                   # 記事データストア (git 管理、Collector が書き出す)
+│   └── YYYY-MM-DD-<slug>--<id6>.md   # 記事 1 件 = 1 Markdown ファイル
+├── next/                      # Next.js アプリケーション (Web + Collector 共存)
+│   ├── app/                   # Next.js App Router (ページ・レイアウト)
+│   │   ├── layout.tsx         # ルートレイアウト
+│   │   ├── page.tsx           # トップページ (Server Component)
+│   │   ├── globals.css        # グローバルスタイル (Tailwind)
+│   │   └── favicon.ico
+│   ├── components/            # 再利用可能 React コンポーネント
+│   │   ├── article-list.tsx
+│   │   ├── article-list-item.tsx
+│   │   ├── empty-state.tsx
+│   │   ├── footer.tsx
+│   │   ├── header.tsx
+│   │   └── source-badge.tsx
+│   ├── lib/                   # フロントエンド共有ライブラリ
+│   │   ├── article.ts         # ドメインモデル (zod スキーマ + 型 + 変換関数)
+│   │   ├── articles.ts        # リポジトリ層 + ビュー変換ユーティリティ
+│   │   ├── articles.test.ts   # articles.ts のユニットテスト
+│   │   └── articles.pbt.test.ts  # プロパティベーステスト
+│   ├── config/
+│   │   └── sources.ts         # ニュースソース設定 (zod スキーマ + 実設定値)
 │   ├── scripts/
-│   │   └── collector/    # News collector CLI script
-│   │       ├── lib/      # Collector infrastructure (HTTP, FS, slug, dedup, etc.)
-│   │       ├── sources/  # Per-source fetcher implementations
-│   │       └── test/     # Collector unit/integration tests + test doubles
-│   ├── next.config.ts    # Next.js config
-│   ├── tsconfig.json     # TypeScript config (path alias @/* → next/*)
-│   ├── vitest.config.ts  # Vitest config
-│   ├── playwright.config.ts  # Playwright config
-│   └── package.json      # npm scripts and dependencies
-├── specs/                # SpecKit feature specifications
-├── aidlc-docs/           # AI-assisted development lifecycle docs
+│   │   └── collector/         # Collector スクリプト (Node.js)
+│   │       ├── index.ts       # エントリポイント
+│   │       ├── runner.ts      # CollectorRunner クラス
+│   │       ├── builder.ts     # DI 組み立て (buildRunner 関数)
+│   │       ├── logger.ts      # Logger インタフェース + DefaultLogger
+│   │       ├── lib/           # Collector 内部ライブラリ
+│   │       │   ├── article-id.ts        # SHA-256 ベースの ID 生成
+│   │       │   ├── clock.ts             # Clock 型 + systemClock
+│   │       │   ├── deduplicator.ts      # URL 重複排除
+│   │       │   ├── file-system.ts       # FileSystem / FileReader インタフェース
+│   │       │   ├── http-client.ts       # HttpClient インタフェース + DefaultHttpClient
+│   │       │   ├── job-summary-reporter.ts  # 実行結果レポート
+│   │       │   ├── markdown-writer.ts   # Markdown ファイル書き出し
+│   │       │   ├── secret-scrubber.ts   # ログのシークレットマスク
+│   │       │   ├── slug-builder.ts      # URL-safe スラッグ生成
+│   │       │   └── url-normalize.ts     # URL 正規化 (重複排除用)
+│   │       ├── sources/       # ソース別フェッチャー
+│   │       │   ├── source-fetcher.ts    # SourceFetcher<TConfig> インタフェース
+│   │       │   ├── rss-mapping.ts       # RSS パース共通ロジック
+│   │       │   ├── zenn-rss-fetcher.ts
+│   │       │   ├── hatena-rss-fetcher.ts
+│   │       │   ├── google-news-rss-fetcher.ts
+│   │       │   └── togetter-scraper.ts  # HTML スクレイパー (cheerio)
+│   │       ├── test/          # Collector テスト
+│   │       │   ├── generators/          # fast-check Arbitrary ジェネレータ
+│   │       │   ├── in-memory-file-system.ts  # テスト用 FileSystem 実装
+│   │       │   ├── recording-http-client.ts  # テスト用 HttpClient 実装
+│   │       │   ├── *.test.ts            # ユニットテスト
+│   │       │   ├── *.pbt.test.ts        # プロパティベーステスト
+│   │       │   └── sources/*.test.ts    # ソース別テスト
+│   │       └── compose-commit-message.cjs  # コミットメッセージ生成 (CJS)
+│   ├── e2e/
+│   │   └── home.spec.ts       # Playwright E2E テスト
+│   ├── public/                # 静的アセット (SVG 等)
+│   ├── next.config.ts         # Next.js 設定
+│   ├── tsconfig.json          # TypeScript 設定
+│   ├── vitest.config.ts       # Vitest 設定
+│   ├── playwright.config.ts   # Playwright 設定
+│   ├── eslint.config.mjs      # ESLint 設定
+│   ├── package.json
+│   └── collector-result.json  # Collector 最終実行結果 (自動生成)
 ├── .github/
 │   └── workflows/
-│       ├── ci.yml        # Lint + type-check + test + build + e2e
-│       └── collect.yml   # Nightly collector cron + commit
-├── .claude/              # Claude/GSD tooling (skills, agents, commands)
-├── .planning/            # GSD planning artefacts
-│   └── codebase/         # Codebase map documents (this directory)
-├── .specify/             # SpecKit specification workflows
-├── .aidlc-rule-details/  # AI development rules
-├── .nvmrc                # Node version pin
-├── CLAUDE.md             # Root-level Claude instructions
-└── README.md             # Project overview
+│       ├── ci.yml             # CI パイプライン (lint・test・build・E2E・セキュリティ)
+│       └── collect.yml        # 毎日 UTC 22:00 の Collector 自動実行
+├── specs/                     # 機能仕様書 (SpecKit)
+├── aidlc-docs/                # AIDLC 設計ドキュメント
+├── .planning/                 # GSD 計画ドキュメント
+│   └── codebase/              # コードベースマップ (本ドキュメント等)
+├── .nvmrc                     # Node.js バージョン固定
+└── CLAUDE.md                  # AI エージェント向け指示
 ```
 
-## Directory Purposes
+## ディレクトリの役割
 
 **`content/`:**
-- Purpose: Persistent article data store. Every collected article is a single `.md` file.
-- Contains: Flat collection of Markdown files with YAML frontmatter (`id`, `title`, `url`, `source`, `published_at`, `collected_at`, `summary`, `tags`, `thumbnail_url`)
-- Key files: Any file matching `YYYY-MM-DD-<slug>--<id>.md`
-- Generated: Yes (by collector). Do not edit manually.
-- Committed: Yes — this is the data layer committed to git by the GitHub Actions cron.
+- 役割: 記事データストア。git で管理される
+- 含むもの: `YYYY-MM-DD-<slug>--<id6>.md` 形式の Markdown ファイル (約 880 件以上)
+- 重要ファイル: frontmatter に `id`, `title`, `url`, `source`, `published_at`, `collected_at`, `summary`, `tags`, `thumbnail_url` を持つ
 
 **`next/app/`:**
-- Purpose: Next.js App Router root — pages and layout
-- Contains: `layout.tsx` (HTML shell + fonts), `page.tsx` (home page Server Component), `globals.css`, `favicon.ico`
-- Key files: `next/app/page.tsx`, `next/app/layout.tsx`
+- 役割: Next.js App Router のページ定義
+- 含むもの: Root Layout、トップページ (Server Component)
+- 重要ファイル: `next/app/page.tsx` (唯一のページ)
 
 **`next/components/`:**
-- Purpose: Reusable React UI components (all server-side, no client directives)
-- Contains: `article-list.tsx`, `article-list-item.tsx`, `header.tsx`, `footer.tsx`, `empty-state.tsx`, `source-badge.tsx`
-
-**`next/config/`:**
-- Purpose: Static runtime configuration for news sources
-- Contains: `sources.ts` — Zod-validated config object with enabled flags, feed URLs, and per-source limits
-- Key files: `next/config/sources.ts`
+- 役割: 再利用可能な React コンポーネント
+- 含むもの: プレゼンテーション専用コンポーネント (ロジックなし)
+- 命名: kebab-case ファイル名、PascalCase エクスポート
 
 **`next/lib/`:**
-- Purpose: Domain types and the article repository (shared between app and collector via `@/lib/`)
-- Contains: `article.ts` (core `Article` type + Zod schemas), `articles.ts` (`FsArticleRepository`, display helpers, `ArticleListItemView`)
-- Key files: `next/lib/article.ts`, `next/lib/articles.ts`
+- 役割: フロントエンドとドメインロジック共有ライブラリ
+- 含むもの: `article.ts` (ドメインモデル)、`articles.ts` (リポジトリ + ユーティリティ)、テストファイル
+- 重要: `article.ts` は Collector スクリプトからも参照されるため両者の共有境界
+
+**`next/config/`:**
+- 役割: アプリケーション設定
+- 含むもの: ニュースソース設定 (`sources.ts`)
 
 **`next/scripts/collector/`:**
-- Purpose: Standalone Node.js CLI that fetches news and writes to `content/`
-- Key files: `index.ts` (entry), `builder.ts` (DI wiring), `runner.ts` (orchestrator), `logger.ts`
-
-**`next/scripts/collector/lib/`:**
-- Purpose: Collector infrastructure abstractions (all interface-driven for testability)
-- Contains: `article-id.ts`, `clock.ts`, `deduplicator.ts`, `file-system.ts`, `http-client.ts`, `job-summary-reporter.ts`, `markdown-writer.ts`, `secret-scrubber.ts`, `slug-builder.ts`, `url-normalize.ts`
-
-**`next/scripts/collector/sources/`:**
-- Purpose: One file per news source; each implements `SourceFetcher<TConfig>`
-- Contains: `zenn-rss-fetcher.ts`, `hatena-rss-fetcher.ts`, `google-news-rss-fetcher.ts`, `togetter-scraper.ts`, `rss-mapping.ts` (shared RSS parser), `source-fetcher.ts` (interface)
-
-**`next/scripts/collector/test/`:**
-- Purpose: Vitest unit/integration tests for the collector, plus test doubles
-- Contains: Test files (`*.test.ts`, `*.pbt.test.ts`), test double implementations (`in-memory-file-system.ts`, `recording-http-client.ts`), generators (`generators/`)
+- 役割: ニュース収集バッチスクリプト
+- 含むもの: Collector の全実装 (エントリポイント・Runner・DI・ライブラリ・ソース・テスト)
+- 実行方法: `npm run collect` (tsx で直接実行)
 
 **`next/e2e/`:**
-- Purpose: Playwright end-to-end browser tests
-- Contains: `home.spec.ts`
+- 役割: Playwright E2E テスト
+- 含むもの: `home.spec.ts` (トップページのスモークテスト)
 
-**`specs/`:**
-- Purpose: SpecKit feature specification documents
-- Contains: One subdirectory per spec (e.g., `specs/001-browser-user-agent/`)
+## 重要なファイルの場所
 
-## Key File Locations
+**エントリポイント:**
+- `next/app/page.tsx`: Web フロントエンドのトップページ
+- `next/scripts/collector/index.ts`: Collector バッチのエントリポイント
+- `next/app/layout.tsx`: Next.js ルートレイアウト
 
-**Entry Points:**
-- `next/scripts/collector/index.ts`: Collector CLI entry point
-- `next/app/page.tsx`: Home page (Next.js Server Component)
-- `next/app/layout.tsx`: Root layout
+**設定:**
+- `next/config/sources.ts`: ニュースソース接続設定
+- `next/tsconfig.json`: TypeScript 設定 (`@/*` エイリアスを `next/` にマップ)
+- `next/next.config.ts`: Next.js 設定
+- `.nvmrc`: Node.js バージョン
+- `.github/workflows/collect.yml`: Collector の自動実行スケジュール
 
-**Configuration:**
-- `next/config/sources.ts`: Source-specific fetch configuration (feed URLs, limits, enabled flags)
-- `next/next.config.ts`: Next.js config (currently minimal)
-- `next/tsconfig.json`: TypeScript config; defines `@/*` → `./` path alias
-- `next/vitest.config.ts`: Vitest test runner config
-- `next/playwright.config.ts`: Playwright E2E config
-- `.nvmrc`: Node.js version
+**コアロジック:**
+- `next/lib/article.ts`: ドメインモデル (全コードの型的基盤)
+- `next/lib/articles.ts`: `FsArticleRepository`、フィルタ・ソート・ビュー変換
+- `next/scripts/collector/runner.ts`: Collector のオーケストレーションロジック
+- `next/scripts/collector/builder.ts`: DI 組み立て
 
-**Core Domain:**
-- `next/lib/article.ts`: `Article` type, `ArticleSchema`, `ArticleFrontmatterSchema`, serialisation helpers
-- `next/lib/articles.ts`: `FsArticleRepository`, view model helpers, display formatting
+**テスト:**
+- `next/lib/articles.test.ts`: リポジトリ層ユニットテスト
+- `next/scripts/collector/test/`: Collector ユニットテスト群
+- `next/e2e/home.spec.ts`: E2E テスト
 
-**CI/CD:**
-- `.github/workflows/ci.yml`: Static checks, build, E2E, secret scan, npm audit
-- `.github/workflows/collect.yml`: Nightly collector run + git commit
+## 命名規則
 
-## Naming Conventions
+**ファイル:**
+- TypeScript ソースファイル: kebab-case (例: `article-list-item.tsx`, `slug-builder.ts`)
+- テストファイル: `<対象>.test.ts` または `<対象>.pbt.test.ts` (プロパティベース)
+- E2E テスト: `<ページ>.spec.ts`
 
-**Files:**
-- TypeScript source: `kebab-case.ts` (e.g., `article-list-item.tsx`, `http-client.ts`)
-- Test files: `<subject>.test.ts` for unit tests, `<subject>.pbt.test.ts` for property-based tests
-- Test doubles: descriptive names in `test/` directory (e.g., `in-memory-file-system.ts`, `recording-http-client.ts`)
+**ディレクトリ:**
+- kebab-case (例: `scripts/collector/`, `article-list-item.tsx`)
 
-**Content files:**
-- Pattern: `YYYY-MM-DD-<ascii-slug>--<6-char-id>.md`
-- Example: `2026-04-23-ai-ai-bloggoogle--2wqz9b.md`
-- Pure-id fallback (non-ASCII titles): `YYYY-MM-DD-<8-char-id>.md`
+**コード識別子:**
+- クラス・型・インタフェース: PascalCase (例: `CollectorRunner`, `ArticleRepository`)
+- 関数・変数: camelCase (例: `buildRunner`, `filterArticlesWithinDays`)
+- 定数 (モジュールレベル): UPPER_SNAKE_CASE (例: `DISPLAY_WINDOW_DAYS`, `MILLIS_PER_DAY`)
+- React コンポーネント: PascalCase (例: `ArticleList`, `SourceBadge`)
 
-**Directories:**
-- All `kebab-case`
+**content/ ファイル名:**
+- `YYYY-MM-DD-<slug>--<id6>.md`
+  - 日付: `published_at` の先頭 10 文字
+  - スラッグ: タイトルの ASCII 部分 (最大 44 文字)
+  - ID サフィックス: `article.id` の先頭 6 文字
+  - 衝突時: `...-2.md`, `...-3.md` とサフィックスを追加
 
-**TypeScript exports:**
-- Classes: `PascalCase` (e.g., `CollectorRunner`, `FsArticleRepository`)
-- Interfaces: `PascalCase` with descriptive name (e.g., `SourceFetcher`, `HttpClient`)
-- Functions: `camelCase` (e.g., `buildRunner`, `fromFrontmatter`, `sortArticlesForDisplay`)
-- Zod schemas: `<Type>Schema` (e.g., `ArticleSchema`, `SourceConfigSchema`)
-- Types inferred from Zod: matching name without `Schema` (e.g., `Article`, `SourceConfig`)
+## 新規コード追加ガイド
 
-## Where to Add New Code
+**新しいニュースソースを追加する場合:**
+1. `next/config/sources.ts` に `XxxConfigSchema` と設定値を追加
+2. `next/lib/article.ts` の `ARTICLE_SOURCES` 配列に `sourceId` を追加
+3. `next/scripts/collector/sources/xxx-fetcher.ts` に `SourceFetcher<XxxConfig>` 実装クラスを作成
+4. `next/scripts/collector/builder.ts` の `fetchers` オブジェクトに追加
+5. `next/scripts/collector/runner.ts` の `ordered` 配列に追加
+6. `next/lib/articles.ts` の `SOURCE_LABEL` に表示ラベルを追加
+7. `next/components/source-badge.tsx` の `BADGE_CLASS` に色クラスを追加
 
-**New news source:**
-- Implement `SourceFetcher<TConfig>` in: `next/scripts/collector/sources/<name>-fetcher.ts` (or `-scraper.ts`)
-- Add config schema and type to: `next/config/sources.ts`
-- Register in wiring: `next/scripts/collector/builder.ts` (`fetchers` object)
-- Register in orchestrator: `next/scripts/collector/runner.ts` (`ordered` array, `perSource` initial state)
-- Add source ID to: `next/lib/article.ts` (`ARTICLE_SOURCES` constant)
-- Add source label to: `next/lib/articles.ts` (`SOURCE_LABEL` map)
-- Tests: `next/scripts/collector/test/sources/<name>-fetcher.test.ts`
+**新しい React コンポーネントを追加する場合:**
+- 実装: `next/components/<component-name>.tsx`
+- props 型はファイル内 `interface` で定義 (exported でなくて良い)
 
-**New UI component:**
-- Implementation: `next/components/<name>.tsx`
-- No barrel `index.ts` — import directly by file path
+**新しいユーティリティ関数を追加する場合:**
+- フロントエンド用: `next/lib/articles.ts` または新規 `next/lib/<feature>.ts`
+- Collector 内部用: `next/scripts/collector/lib/<feature>.ts`
 
-**New shared utility:**
-- Collector-only utilities: `next/scripts/collector/lib/<name>.ts`
-- Web/domain utilities: `next/lib/<name>.ts`
+**テストを追加する場合:**
+- フロントエンド lib: `next/lib/<対象>.test.ts`
+- Collector lib: `next/scripts/collector/test/<対象>.test.ts`
+- Collector sources: `next/scripts/collector/test/sources/<source>.test.ts`
+- プロパティベーステスト: `<対象>.pbt.test.ts`
+- fast-check ジェネレータ: `next/scripts/collector/test/generators/<対象>.gen.ts`
 
-**New page:**
-- Add file under: `next/app/<route>/page.tsx` (Next.js App Router convention)
-
-**Tests:**
-- Unit tests for lib/components: co-located in `next/lib/<name>.test.ts` or `next/scripts/collector/test/<name>.test.ts`
-- E2E tests: `next/e2e/<name>.spec.ts`
-
-## Special Directories
-
-**`content/`:**
-- Purpose: Flat article data store — one `.md` per article
-- Generated: Yes (by collector script / GitHub Actions)
-- Committed: Yes — this IS the database
+## 特殊ディレクトリ
 
 **`next/.next/`:**
-- Purpose: Next.js build output and cache
-- Generated: Yes
-- Committed: No (gitignored)
+- 役割: Next.js ビルド成果物
+- 自動生成: Yes
+- git 管理: No (`.gitignore` に記載)
+
+**`next/node_modules/`:**
+- 役割: npm パッケージ
+- 自動生成: Yes (`npm ci`)
+- git 管理: No
+
+**`content/`:**
+- 役割: 記事データストア
+- 自動生成: Collector が追記
+- git 管理: Yes (記事の永続ストレージ)
 
 **`.planning/codebase/`:**
-- Purpose: GSD codebase map documents consumed by `/gsd-plan-phase` and `/gsd-execute-phase`
-- Generated: Yes (by `/gsd-map-codebase`)
-- Committed: Optionally — check team convention
-
-**`.claude/`:**
-- Purpose: Claude Code / GSD tooling (skills, agents, slash commands, hooks)
-- Generated: Yes (by GSD installer)
-- Committed: Yes
+- 役割: GSD コードベースマップ (本ドキュメント等)
+- 自動生成: Yes (`/gsd-map-codebase` コマンド)
+- git 管理: Yes
 
 ---
 
-*Structure analysis: 2026-05-30*
+*構成分析: 2026-05-30*

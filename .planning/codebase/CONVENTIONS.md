@@ -1,167 +1,164 @@
-# Coding Conventions
+# コーディング規約
 
-**Analysis Date:** 2026-05-30
+**分析日:** 2026-05-30
 
-## Naming Patterns
+## 命名規則
 
-**Files:**
-- React components: kebab-case `.tsx` — e.g., `article-list-item.tsx`, `source-badge.tsx`
-- Library modules: kebab-case `.ts` — e.g., `url-normalize.ts`, `slug-builder.ts`
-- Test files: co-located with source suffix `.test.ts` — e.g., `deduplicator.test.ts`
-- Property-based test files: `.pbt.test.ts` suffix — e.g., `articles.pbt.test.ts`
-- Test generators: `*.gen.ts` suffix under `test/generators/` — e.g., `article.gen.ts`
-- Test doubles: descriptive names under `test/` — e.g., `recording-http-client.ts`, `in-memory-file-system.ts`
+**ファイル名:**
+- TypeScript ソースファイル: `kebab-case.ts` / `kebab-case.tsx`（例: `article-list-item.tsx`, `slug-builder.ts`）
+- テストファイル: `{対象ファイル名}.test.ts`（例: `articles.test.ts`）
+- プロパティベーステスト: `{対象ファイル名}.pbt.test.ts`（例: `articles.pbt.test.ts`）
+- ジェネレータ: `{名前}.gen.ts`（例: `article.gen.ts`, `rss-item.gen.ts`）
+- テスト用フェイク実装: `{名前}-{種別}.ts`（例: `in-memory-file-system.ts`, `recording-http-client.ts`）
 
-**Functions:**
-- camelCase for all functions and methods: `formatPublishedAt`, `normalizeUrlForDedup`, `generateArticleId`
-- Factory functions (for test fixtures): camelCase prefixed with `make` or `render` — e.g., `makeArticle`, `renderRssXml`
-- Async operations: async/await throughout, no Promise chains
+**関数・変数:**
+- キャメルケース: `formatPublishedAt`, `generateArticleId`, `filterArticlesWithinDays`
+- 定数（モジュールスコープ）: `UPPER_SNAKE_CASE`（例: `MILLIS_PER_DAY`, `ARTICLE_SOURCES`, `SOURCE_LABEL`, `DEFAULT_TIMEOUT_MS`）
 
-**Variables:**
-- camelCase for local variables: `thresholdDate`, `allFetched`, `startedAtMs`
-- UPPER_SNAKE_CASE for module-level constants: `DISPLAY_WINDOW_DAYS`, `MAX_COLLISION_RETRY`, `CONTENT_DIR`, `MILLIS_PER_DAY`
-- Readonly arrays typed as `ReadonlyArray<T>` at function boundaries
+**クラス・インターフェース・型:**
+- PascalCase: `ArticleSchema`, `FsArticleRepository`, `DefaultHttpClient`, `CollectorRunner`
+- インターフェース名に `I` プレフィックスは使わない（例: `FileReader`, `HttpClient`, `Logger`）
+- Deps サフィックスを依存オブジェクト型に使用: `MarkdownWriterDeps`, `DeduplicatorDeps`, `LoggerDeps`
+- Zod スキーマには `Schema` サフィックス: `ArticleSchema`, `SourceConfigSchema`
+- Zod スキーマから型を `z.infer<>` で導出: `export type Article = z.infer<typeof ArticleSchema>`
 
-**Types:**
-- PascalCase for interfaces and type aliases: `ArticleListItemView`, `CollectorRunnerDeps`, `WriteResult`
-- `Schema` suffix for Zod schemas: `ArticleSchema`, `ZennConfigSchema`, `SourceConfigSchema`
-- `Deps` suffix for dependency injection interfaces: `ZennRssFetcherDeps`, `MarkdownWriterDeps`, `LoggerDeps`
-- Types inferred from Zod schemas with `z.infer<typeof XxxSchema>`: `type Article = z.infer<typeof ArticleSchema>`
-- `Config` suffix for source configuration types: `ZennConfig`, `HatenaConfig`, `GoogleNewsConfig`
+## コードスタイル
 
-**Classes:**
-- PascalCase: `DefaultHttpClient`, `FsArticleRepository`, `CollectorRunner`, `SlugBuilder`
-- `Default` prefix for concrete implementations of interfaces: `DefaultHttpClient`, `DefaultFileSystem`, `DefaultLogger`
-- `InMemory` prefix for in-memory test doubles: `InMemoryFileSystem`, `InMemoryFileReader`
-- `Recording` prefix for recording/spy test doubles: `RecordingHttpClient`
+**フォーマット:**
+- ESLint 使用: `eslint-config-next/core-web-vitals` + `eslint-config-next/typescript`（設定: `next/eslint.config.mjs`）
+- `prettier` の設定ファイルは存在しない（ESLint のみ）
+- TypeScript strict モード有効（`next/tsconfig.json` の `"strict": true`）
 
-## Code Style
+**型注釈:**
+- 値のインポートと型のインポートを分離: `import type { Article } from "@/lib/article"` + `import { fromFrontmatter } from "@/lib/article"`
+- 読み取り専用コレクションには `ReadonlyArray<T>` を使用: `filterArticlesWithinDays(articles: ReadonlyArray<Article>, ...)`
+- プライベートフィールドには `private readonly` を使用
 
-**Formatting:**
-- No Prettier config found; formatting appears to be handled via ESLint with Next.js rules (`eslint-config-next`)
-- Single quotes for imports
-- Trailing commas in multi-line structures
-- Semicolons present
+## import の構成
 
-**Linting:**
-- ESLint v9 flat config at `next/eslint.config.mjs`
-- Uses `eslint-config-next/core-web-vitals` and `eslint-config-next/typescript`
-- Scripts using CommonJS `require()` are explicitly excluded from linting: `scripts/collector/compose-commit-message.cjs`
+**順序（ブランク行で区切る）:**
+1. Node.js 組み込み（`node:` プレフィックス付き）: `import path from "node:path";`
+2. 外部ライブラリ: `import matter from "gray-matter";`
+3. プロジェクト内エイリアス（`@/` から始まる）: `import type { Article } from "@/lib/article";`
+4. 相対パス（同一モジュール内）: `import { SlugBuilder } from "./slug-builder";`
 
-**TypeScript:**
-- Strict mode enabled (`"strict": true` in `next/tsconfig.json`)
-- `noEmit: true` — TypeScript used for type-checking only, not transpilation
-- Path alias `@/*` maps to `next/` root — use `@/lib/article`, `@/config/sources` for root-relative imports
+**パスエイリアス:**
+- `@/*` は `next/` ディレクトリルートを指す（`next/tsconfig.json` で定義）
+- 例: `@/lib/article`, `@/config/sources`, `@/components/article-list`
 
-## Import Organization
+## インターフェース設計（依存性注入）
 
-**Order (enforced by ESLint Next.js rules):**
-1. Node.js built-ins with `node:` prefix — e.g., `import path from "node:path"`, `import { createHash } from "node:crypto"`
-2. External packages — e.g., `import matter from "gray-matter"`, `import * as fc from "fast-check"`
-3. Internal `@/` alias imports (cross-module) — e.g., `import type { Article } from "@/lib/article"`
-4. Relative imports within the same module tree — e.g., `import { Deduplicator } from "../lib/deduplicator"`
+**Deps パターン:**
+クラスコンストラクタは単一の `Deps` インターフェースを受け取る。これによりテストでの差し替えが容易になる。
 
-**Type-only imports:**
-- Always use `import type { ... }` for type-only imports — this pattern is used consistently throughout:
-  ```typescript
-  import type { Article } from "@/lib/article";
-  import type { HttpClient } from "../lib/http-client";
-  ```
-
-**Path Aliases:**
-- `@/*` maps to `next/` root (defined in `next/tsconfig.json` and `next/vitest.config.ts`)
-- Use `@/lib/article` not relative `../../lib/article` when crossing into root-level modules
-
-## Error Handling
-
-**Patterns:**
-- Throw `new Error(message)` with descriptive messages including context — e.g., `throw new Error(\`Invalid frontmatter in ${filePath}: ${message}\`)`
-- Catch `err`, extract message with helper: `const message = err instanceof Error ? err.message : String(err)`
-- In source fetchers: catch per-feed errors and log as `warn`, continue processing remaining feeds
-- In `CollectorRunner`: catch per-source failures, record in `failedSources`, continue to next source
-- Zod schema validation: call `.parse()` which throws on invalid data — caller wraps in try/catch as needed
-- Guard clauses before method calls: `if (!this.initialized) throw new Error("...")`
-- Filesystem `exists()` checks return `false` via try/catch on `fs.access()`, not by checking error codes
-
-**Error Message Convention:**
 ```typescript
-// Extraction helper (used in runner.ts and source fetchers):
-const message = err instanceof Error ? err.message : String(err);
-```
+// 実装例: next/scripts/collector/lib/markdown-writer.ts
+export interface MarkdownWriterDeps {
+  contentDir: string;
+  fileSystem: FileSystem;
+  slugBuilder: SlugBuilder;
+}
 
-## Logging
-
-**Framework:** Custom `Logger` interface (`next/scripts/collector/logger.ts`) backed by `DefaultLogger` class.
-
-**Interface:**
-```typescript
-interface Logger {
-  info(source: LogSource, message: string, context?: LogContext): void;
-  warn(source: LogSource, message: string, context?: LogContext): void;
-  error(source: LogSource, message: string, context?: LogContext): void;
-  getReports(): ReadonlyArray<ReportEntry>;
+export class MarkdownWriter {
+  constructor(deps: MarkdownWriterDeps) { ... }
 }
 ```
 
-**Patterns:**
-- Always pass `source` as first argument — either a `SourceId` (`"zenn"`, `"hatena"`, etc.) or `"collector"` for orchestration-level messages
-- Pass structured context as the optional third argument: `logger.info("collector", "dedup", { knownUrls: count })`
-- Context values are key-value pairs; strings with spaces are JSON-quoted automatically
-- Secret scrubbing is applied automatically by `DefaultLogger` via `SecretScrubber`
-- In tests, silence logger output with `new DefaultLogger({ out: () => undefined })`
+**デフォルト実装:**
+モジュールレベルのシングルトンとして `default*` 名のインスタンスをエクスポート:
+- `next/scripts/collector/lib/http-client.ts`: `export const defaultHttpClient: HttpClient = new DefaultHttpClient();`
+- `next/scripts/collector/lib/file-system.ts`: `export const defaultFileSystem: FileSystem = new DefaultFileSystem();`
+- `next/lib/articles.ts`: `export const articleRepository: ArticleRepository = new FsArticleRepository();`
 
-## Comments
+## バリデーションパターン
 
-**When to Comment:**
-- Inline comments for non-obvious implementation choices: `// Deduplicator only inspects URL, so a placeholder collectedAt is fine.`
-- Comments cross-reference spec IDs in test descriptions: `"sends a browser-like User-Agent on every request (FR-001/FR-002)"`
-- Regression guards noted in test descriptions: `"does not send the legacy collector User-Agent (regression guard)"`
+**Zod を使用したスキーマ定義:**
+入力データは必ず zod スキーマで検証する。
 
-**JSDoc/TSDoc:**
-- Not used — no JSDoc comments found in the codebase; types convey intent instead
+```typescript
+// 実装例: next/lib/article.ts
+export const ArticleSchema = z.object({
+  id: z.string().min(1),
+  url: z.string().url(),
+  publishedAt: z.string().datetime({ offset: true }),
+  ...
+});
+export type Article = z.infer<typeof ArticleSchema>;
+```
 
-## Function Design
+スキーマは設定ファイル（`next/config/sources.ts`）でも同様に使用する。
 
-**Size:** Functions are kept small and single-purpose. Pure utility functions (e.g., `normalizeUrlForDedup`, `computeDateThreshold`, `filterFileNamesByDatePrefix`) have no side effects.
+## エラーハンドリング
 
-**Parameters:**
-- Dependency injection via a single `deps` object for classes with multiple collaborators — e.g.:
-  ```typescript
-  export interface MarkdownWriterDeps {
-    contentDir: string;
-    fileSystem: FileSystem;
-    slugBuilder: SlugBuilder;
-  }
-  export class MarkdownWriter {
-    constructor(deps: MarkdownWriterDeps) { ... }
-  }
-  ```
-- Pure functions take explicit parameters; optional `now: Date = new Date()` used for clock injection in pure functions
+**戦略:**
+- I/O エラーは原則として呼び出し元に伝播させる（`throw`）
+- 複数ソースの処理ループでは、1 ソースのエラーが他に影響しないよう `try/catch` で囲む（`next/scripts/collector/runner.ts`）
+- ファイル存在確認に `try/catch` パターン使用（`DefaultFileSystem.exists`）
 
-**Return Values:**
-- Result objects for write operations: `{ written: number; skipped: number }`
-- `ReadonlyArray<T>` for function parameters that must not be mutated
-- Functions that filter arrays return new arrays and never mutate inputs (immutability is tested)
-- Nullable values typed as `T | null`, never `undefined` for domain types
+**エラーメッセージ:**
+```typescript
+// ファイルパスを含めた詳細なエラーメッセージ
+throw new Error(`Invalid frontmatter in ${filePath}: ${message}`);
 
-## Module Design
+// 状態チェックエラー
+throw new Error("Deduplicator must be initialized before filterNew()");
+```
 
-**Exports:**
-- Named exports throughout — no default exports except for Next.js page/layout components (`export default function Home()`, `export default function RootLayout()`) and config objects (`export default sourceConfig`)
-- Classes export their `Deps` interface alongside the class itself
-- Zod schemas exported with their inferred types
+**`errorMessage` ヘルパー:**
+- `next/scripts/collector/sources/rss-mapping.ts` に `errorMessage(err: unknown): string` 関数を定義
+- `unknown` 型の例外を安全に文字列化
 
-**Barrel Files:** Not used — import directly from the source file
+## ロギング
 
-**Interface-First Design:**
-- Collaborators are always typed to interfaces, never concrete classes:
-  ```typescript
-  // Correct — typed to interface
-  private readonly fileSystem: FileSystem;
-  // Not: DefaultFileSystem
-  ```
-- Production singletons exported as the interface type: `export const defaultHttpClient: HttpClient = new DefaultHttpClient()`
+**Logger インターフェース:**
+- `next/scripts/collector/logger.ts` に `Logger` インターフェースを定義
+- `info`, `warn`, `error` の 3 レベル
+- 構造化コンテキスト: `logger.info("collector", "dedup initialized", { knownUrls: 42 })`
+- `DefaultLogger` はログ行をフォーマットして出力し、`getReports()` でログ一覧を取得可能
+
+**シークレットのスクラビング:**
+- `DefaultLogger` は内部で `SecretScrubber`（`next/scripts/collector/lib/secret-scrubber.ts`）を使用
+- Bearer トークン・API キーなどをログに出力する前に `[REDACTED]` に置換
+
+## React コンポーネント
+
+**Props インターフェース:**
+ファイル内のみで使用する場合は `export` しない:
+```typescript
+// 実装例: next/components/header.tsx
+interface HeaderProps {
+  stats: PageStats;
+}
+export function Header({ stats }: HeaderProps) { ... }
+```
+
+**データ取得:**
+- Next.js の Server Component で直接 `async` 関数として実装（`next/app/page.tsx`）
+- クライアントコンポーネントは存在しない（現時点では全て Server Component）
+
+**テスト属性:**
+E2E テスト用に `data-testid` 属性を付与:
+- `data-testid="header-article-count"`
+- `data-testid="footer-last-updated"`
+- `data-testid="article-link"`
+
+## モジュール構成
+
+**エクスポートパターン:**
+- named export を使用（default export は React コンポーネントと設定ファイルのみ）
+- バレルファイル（`index.ts`）は使用しない
+
+**定数の配置:**
+モジュールスコープの定数は関数定義の上に配置:
+```typescript
+const MILLIS_PER_DAY = 24 * 60 * 60 * 1000;
+const FILENAME_DATE_PREFIX = /^(\d{4}-\d{2}-\d{2})-/;
+```
+
+**イミュータビリティ:**
+- 入力配列は変更しない（`[...articles].sort(...)`）
+- クラスフィールドは `private readonly` または `readonly`
 
 ---
 
-*Convention analysis: 2026-05-30*
+*規約分析日: 2026-05-30*
