@@ -4,7 +4,15 @@ import path from "node:path";
 import matter from "gray-matter";
 
 import type { Article, SourceId } from "@/lib/article";
-import { ARTICLE_SOURCES, fromFrontmatter } from "@/lib/article";
+import { fromFrontmatter } from "@/lib/article";
+import type { SourceTabId } from "@/lib/source-tabs-utils";
+import {
+  filterArticlesBySource,
+  SOURCE_TABS,
+} from "@/lib/source-tabs-utils";
+
+export type { SourceTabId };
+export { filterArticlesBySource, SOURCE_TABS };
 
 export const SOURCE_LABEL: Record<SourceId, string> = {
   zenn: "Zenn",
@@ -12,13 +20,6 @@ export const SOURCE_LABEL: Record<SourceId, string> = {
   googlenews: "Google ニュース",
   togetter: "Togetter",
 };
-
-export type SourceTabId = "all" | SourceId;
-
-export const SOURCE_TABS: ReadonlyArray<{ id: SourceTabId; label: string }> = [
-  { id: "all", label: "すべて" },
-  ...ARTICLE_SOURCES.map((id) => ({ id, label: SOURCE_LABEL[id] })),
-];
 
 const DATE_FORMATTER = new Intl.DateTimeFormat("ja-JP", {
   dateStyle: "long",
@@ -58,16 +59,6 @@ export function toListItemView(article: Article): ArticleListItemView {
     publishedAtIso: article.publishedAt,
     publishedAtDisplay: formatPublishedAt(article.publishedAt),
   };
-}
-
-export function filterArticlesBySource(
-  views: ReadonlyArray<ArticleListItemView>,
-  tabId: SourceTabId,
-): ArticleListItemView[] {
-  if (tabId === "all") {
-    return [...views];
-  }
-  return [...views].filter((v) => v.sourceId === tabId);
 }
 
 export function sortArticlesForDisplay(

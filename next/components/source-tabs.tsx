@@ -8,8 +8,8 @@ import type { ArticleListItemView } from "@/lib/articles";
 import {
   filterArticlesBySource,
   SOURCE_TABS,
-} from "@/lib/articles";
-import type { SourceTabId } from "@/lib/articles";
+} from "@/lib/source-tabs-utils";
+import type { SourceTabId } from "@/lib/source-tabs-utils";
 
 interface SourceTabsProps {
   views: ArticleListItemView[];
@@ -23,6 +23,7 @@ export function SourceTabs({ views }: SourceTabsProps) {
   return (
     <div>
       <nav
+        role="tablist"
         data-testid="source-tabs"
         className="flex gap-1 overflow-x-auto border-b border-zinc-200 px-4 dark:border-zinc-800"
       >
@@ -30,6 +31,7 @@ export function SourceTabs({ views }: SourceTabsProps) {
           <button
             key={tab.id}
             type="button"
+            role="tab"
             data-testid={`source-tab-${tab.id}`}
             aria-selected={selected === tab.id}
             onClick={() => setSelected(tab.id)}
