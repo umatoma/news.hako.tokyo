@@ -32,4 +32,62 @@ test.describe("Home page (/)", () => {
     const href = await link.getAttribute("href");
     expect(href).toMatch(/^https?:\/\//);
   });
+
+  test.describe("source tabs (SRC-01 to SRC-05)", () => {
+    test("shows all source tabs with 'all' selected by default", async ({
+      page,
+    }) => {
+      await page.goto("/");
+
+      // SRC-01: 全タブが表示される
+      await expect(page.getByTestId("source-tab-all")).toBeVisible();
+      await expect(page.getByTestId("source-tab-zenn")).toBeVisible();
+      await expect(page.getByTestId("source-tab-hatena")).toBeVisible();
+      await expect(page.getByTestId("source-tab-googlenews")).toBeVisible();
+      await expect(page.getByTestId("source-tab-togetter")).toBeVisible();
+
+      // SRC-04: 初回表示は「すべて」が選択状態
+      await expect(page.getByTestId("source-tab-all")).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+    });
+
+    test("clicking a source tab filters articles without changing URL", async ({
+      page,
+    }) => {
+      await page.goto("/");
+
+      const urlBefore = page.url();
+
+      // SRC-02: タブクリックで URL が変化しない
+      await page.getByTestId("source-tab-zenn").click();
+      expect(page.url()).toBe(urlBefore);
+
+      // クリック後、zenn タブが選択状態になる
+      await expect(page.getByTestId("source-tab-zenn")).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+
+      // SRC-02 + SRC-03: 表示記事はすべて zenn ソースのバッジを持つか、記事なしなら空表示
+      const articleLinks = page.getByTestId("article-link");
+      const emptyMessage = page.getByTestId("empty-state-message");
+      const articleCount = await articleLinks.count();
+
+      if (articleCount > 0) {
+        // 各記事に zenn のソースバッジが含まれることを確認
+        for (let i = 0; i < articleCount; i++) {
+          const item = articleLinks.nth(i);
+          const ancestor = item.locator("xpath=ancestor::li[1]");
+          await expect(
+            ancestor.getByTestId("source-badge-zenn"),
+          ).toBeVisible();
+        }
+      } else {
+        // SRC-05: 記事がない場合は空表示
+        await expect(emptyMessage).toBeVisible();
+      }
+    });
+  });
 });
