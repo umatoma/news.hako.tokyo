@@ -14,7 +14,8 @@ export interface HttpClient {
 }
 
 const DEFAULT_TIMEOUT_MS = 30_000;
-const DEFAULT_USER_AGENT = "news.hako.tokyo collector (umatoma)";
+const DEFAULT_USER_AGENT =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
 
 export class DefaultHttpClient implements HttpClient {
   async get(url: string, options: HttpClientGetOptions = {}): Promise<HttpResponse> {
