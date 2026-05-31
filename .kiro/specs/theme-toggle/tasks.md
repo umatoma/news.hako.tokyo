@@ -2,7 +2,7 @@
 
 ## 1. 基盤: スタイル基盤とテーマロジック
 
-- [ ] 1.1 (P) Tailwind を class ベースダークモードへ移行する
+- [x] 1.1 (P) Tailwind を class ベースダークモードへ移行する
   - `globals.css` の `@import "tailwindcss";` 直後に class ベースの dark バリアントを宣言し、`prefers-color-scheme` ベースの既定を上書きする
   - 既存の `@media (prefers-color-scheme: dark)` 内の配色変数（背景・前景）を `.dark` セレクタ配下へ移行する
   - 完了条件: `<html>` に `dark` クラスを付与/除去すると、背景・前景色と `dark:` ユーティリティの双方が即座に切り替わる（DevTools で確認可能）
