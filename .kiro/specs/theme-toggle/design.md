@@ -254,7 +254,7 @@ export function resolveEffectiveTheme(theme: Theme, prefersDark: boolean): Effec
 #### FOUC script（layout.tsx 内インライン）
 - Intent: ハイドレーション前に保存テーマを解決し `.dark` を初期付与（2.2, 3.1, 3.2）。
 - Implementation Note:
-  - Integration: `<body>` 直前に素の `<script dangerouslySetInnerHTML>`。`<html suppressHydrationWarning>` 必須。
+  - Integration: ルートレイアウトの `<head>` 内に素の `<script dangerouslySetInnerHTML>` を配置（body 描画前に同期実行）。`<html suppressHydrationWarning>` 必須。**注意**: React 19 / Next.js 16 は同期 `<script>` を `<html>` の直接の子に置けない（"`<script>` cannot be a child of `<html>`" エラー）。必ず `<head>` 内に置く（`async` は FOUC を再発させるため不可）。
   - Validation: `localStorage` を try/catch で読み、不正/null は system 扱い。system は `matchMedia` で実効判定。
   - Risks: `lib/theme.ts` の `THEME_STORAGE_KEY` と正規化規則からドリフトしうる → 同一値・同一規則を維持（Revalidation Trigger）。スクリプトは import 不可のため自己完結 JS。
 

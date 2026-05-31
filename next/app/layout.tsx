@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 // FOUC 回避のための初期テーマ適用スクリプト。
-// コンテンツ描画前に同期実行され、保存値を読み取り `.dark` クラスを初期付与する。
+// `<head>` 内で同期実行され、body 描画前に保存値を読み取り `.dark` クラスを初期付与する。
 // import 不可のため自己完結 JS とし、保存キー "theme" と正規化規則は
 // lib/theme.ts（THEME_STORAGE_KEY / parseTheme / resolveEffectiveTheme）と一致させること。
 const themeInitScript = `(function () {
@@ -54,7 +54,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
