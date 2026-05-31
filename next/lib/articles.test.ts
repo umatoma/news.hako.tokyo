@@ -8,15 +8,17 @@ import type { Article } from "@/lib/article";
 import {
   computeDateThreshold,
   computePageStats,
+  filterArticlesBySource,
   filterArticlesWithinDays,
   filterFileNamesByDatePrefix,
   formatPublishedAt,
   FsArticleRepository,
   SOURCE_LABEL,
+  SOURCE_TABS,
   sortArticlesForDisplay,
   toListItemView,
 } from "@/lib/articles";
-import type { FileReader } from "@/lib/articles";
+import type { ArticleListItemView, FileReader } from "@/lib/articles";
 
 class InMemoryFileReader implements FileReader {
   readonly files = new Map<string, string>();
@@ -57,6 +59,78 @@ describe("SOURCE_LABEL", () => {
     expect(SOURCE_LABEL.hatena).toBe("はてブ");
     expect(SOURCE_LABEL.googlenews).toBe("Google ニュース");
     expect(SOURCE_LABEL.togetter).toBe("Togetter");
+  });
+});
+
+describe("SOURCE_TABS", () => {
+  it("先頭要素が all / すべて である", () => {
+    expect(SOURCE_TABS[0]).toEqual({ id: "all", label: "すべて" });
+  });
+
+  it("要素数が5（all + 4ソース）である", () => {
+    expect(SOURCE_TABS).toHaveLength(5);
+  });
+
+  it("ARTICLE_SOURCES の順序で並んでいる", () => {
+    expect(SOURCE_TABS.map((t) => t.id)).toEqual([
+      "all",
+      "zenn",
+      "hatena",
+      "googlenews",
+      "togetter",
+    ]);
+  });
+
+  it("各ソースのラベルが SOURCE_LABEL と一致する", () => {
+    expect(SOURCE_TABS[1]).toEqual({ id: "zenn", label: "Zenn" });
+    expect(SOURCE_TABS[2]).toEqual({ id: "hatena", label: "はてブ" });
+    expect(SOURCE_TABS[3]).toEqual({ id: "googlenews", label: "Google ニュース" });
+    expect(SOURCE_TABS[4]).toEqual({ id: "togetter", label: "Togetter" });
+  });
+});
+
+function makeView(sourceId: ArticleListItemView["sourceId"], id: string): ArticleListItemView {
+  return {
+    id,
+    title: `Article ${id}`,
+    url: `https://example.com/${id}`,
+    sourceId,
+    sourceLabel: SOURCE_LABEL[sourceId],
+    publishedAtIso: "2026-04-25T07:00:00+09:00",
+    publishedAtDisplay: "2026年4月25日 07:00",
+  };
+}
+
+describe("filterArticlesBySource", () => {
+  const views: ArticleListItemView[] = [
+    makeView("zenn", "z1"),
+    makeView("hatena", "h1"),
+    makeView("zenn", "z2"),
+    makeView("googlenews", "g1"),
+  ];
+
+  it("all のとき全件を返す", () => {
+    const result = filterArticlesBySource(views, "all");
+    expect(result).toHaveLength(4);
+    expect(result.map((v) => v.id)).toEqual(["z1", "h1", "z2", "g1"]);
+  });
+
+  it("特定ソースのとき該当ソースのみを返す", () => {
+    const result = filterArticlesBySource(views, "zenn");
+    expect(result).toHaveLength(2);
+    expect(result.map((v) => v.id)).toEqual(["z1", "z2"]);
+  });
+
+  it("該当なしのとき空配列を返す", () => {
+    const result = filterArticlesBySource(views, "togetter");
+    expect(result).toEqual([]);
+  });
+
+  it("入力配列を変異させない", () => {
+    const input: ArticleListItemView[] = [makeView("zenn", "z1")];
+    const snapshot = [...input];
+    filterArticlesBySource(input, "zenn");
+    expect(input).toEqual(snapshot);
   });
 });
 

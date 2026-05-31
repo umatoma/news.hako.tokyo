@@ -5,6 +5,14 @@ import matter from "gray-matter";
 
 import type { Article, SourceId } from "@/lib/article";
 import { fromFrontmatter } from "@/lib/article";
+import type { SourceTabId } from "@/lib/source-tabs-utils";
+import {
+  filterArticlesBySource,
+  SOURCE_TABS,
+} from "@/lib/source-tabs-utils";
+
+export type { SourceTabId };
+export { filterArticlesBySource, SOURCE_TABS };
 
 export const SOURCE_LABEL: Record<SourceId, string> = {
   zenn: "Zenn",

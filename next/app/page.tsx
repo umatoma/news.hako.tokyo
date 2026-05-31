@@ -1,5 +1,4 @@
-import { ArticleList } from "@/components/article-list";
-import { EmptyState } from "@/components/empty-state";
+import { SourceTabs } from "@/components/source-tabs";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import {
@@ -30,7 +29,7 @@ export default async function Home() {
     <>
       <Header stats={stats} />
       <main className="mx-auto w-full max-w-3xl flex-1 bg-white dark:bg-black">
-        {views.length === 0 ? <EmptyState /> : <ArticleList views={views} />}
+        <SourceTabs views={views} />
       </main>
       <Footer stats={stats} />
     </>

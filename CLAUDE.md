@@ -1,22 +1,11 @@
-<!-- SPECKIT START -->
-For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan:
-specs/001-browser-user-agent/plan.md
-<!-- SPECKIT END -->
-
 ## コミュニケーション
 
 ユーザーとのやり取りはすべて日本語で行う。
 
-## ドキュメント記述言語
+## ドキュメント言語
 
-SpecKit（`/speckit.*` コマンド）が生成・更新するドキュメントの記述内容は、すべて日本語で書く。
-対象: `.specify/memory/constitution.md`、`specs/**/spec.md`・`plan.md`・`tasks.md`・`research.md`・
-`data-model.md`・`quickstart.md`・`checklist.md`、その他 SpecKit が出力する成果物。
+GSD が生成・更新するすべてのドキュメントは日本語で記述する。対象は `.planning/` 配下の成果物すべて（PROJECT.md、REQUIREMENTS.md、ROADMAP.md、STATE.md、`research/`、`codebase/`、PLAN.md、各種レビュー/検証レポート等）を含む。
 
-- 説明文・要件（FR-xxx）・受け入れシナリオ・タスク説明・根拠などの**本文は日本語**で記述する。
-- 構造の見出しや定型ラベル（`## Requirements`、`### Functional Requirements`、
-  `## Success Criteria`、`## Constitution Check`、`Acceptance Scenarios`、`Given/When/Then`、
-  `MUST`/`SHOULD` 等の要件キーワード）は、SpecKit スキルの解析・整合性チェックが前提とするため
-  **英語のまま維持する**。
-- 識別子・コマンド・パス・コード（`npm run build`、`next/lib/` など）は原文のまま。
+- 見出し・本文・説明は日本語で書く。
+- 技術用語、コード識別子、ファイルパス、コマンド、ライブラリ名はそのままの原語表記を保持する。
+- テンプレート由来の英語の定型見出しも日本語に置き換える（例: "Technology Stack" → 「技術スタック」）。
