@@ -20,7 +20,7 @@
 
 ## 2. コア: テーマ切替 UI
 
-- [ ] 2.1 テーマ切替 Client Component を実装する
+- [x] 2.1 テーマ切替 Client Component を実装する
   - 3つの選択肢をネイティブボタン群として描画し、現在選択を支援技術向けの状態属性で可視化する（キーボード操作可）
   - 選択時に選択値を同一ブラウザ内へ永続化し、実効テーマを `<html>` の `.dark` クラスへ即時反映する（再読み込み不要）
   - マウント時に保存値を正規化して状態を初期化する（既に初期スクリプトが適用済みの DOM に対し冪等に動作）
@@ -59,3 +59,7 @@
   - _Requirements: 2.1, 2.2, 3.1, 3.2_
   - _Boundary: e2e_
   - _Depends: 3.1, 3.2_
+
+## Implementation Notes
+- 2.1: React 19 / eslint-config-next 同梱の `react-hooks/set-state-in-effect` ルールにより、`useEffect` 内 setState（design.md 記載の初期同期パターン）は lint エラーになる。`useSyncExternalStore`（サーバースナップショット=既定 system、クライアント=localStorage 正規化値）で代替。後続タスクで effect 内 setState を避けること。
+- 2.1: vitest 環境は `node`（`vitest.config.ts`）で jsdom / @testing-library/react は未インストール。React コンポーネントのクリック相互作用テストは不可。`renderToStaticMarkup` での描画検証＋副作用ヘルパーへのスタブ注入で観測する方式を採用。タスク4.1 の実ブラウザ相互作用は Playwright(E2E) が担当。
